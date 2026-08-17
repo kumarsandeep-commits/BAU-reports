@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Hopcharge · Daily Field Report</title>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <!-- React -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F0F4F8;min-height:100vh}
+    input,select,textarea,button{font-family:inherit}
+    ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:10px}
+  </style>
+</head>
+<body>
+<div id="root">
+  <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px;color:#6B7280">
+    <div style="width:40px;height:40px;border:3px solid #E2E8F0;border-top-color:#222E53;border-radius:50%;animation:spin 1s linear infinite"></div>
+    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+    <span style="font-size:14px">Loading Hopcharge Field Reports…</span>
+  </div>
+</div>
+
+<!-- ── Firebase init ──────────────────────────── -->
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBDJZHtfZ14BWENG-lVi-xD5iBY0FCcCQQ",
+  authDomain: "hopcharge-field-reports.firebaseapp.com",
+  projectId: "hopcharge-field-reports",
+  storageBucket: "hopcharge-field-reports.firebasestorage.app",
+  messagingSenderId: "118591151417",
+  appId: "1:118591151417:web:a61eb0461380a7a7305ce8"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+</script>
+
+<!-- ── App ────────────────────────────────────── -->
+<script type="text/babel">
+const {useState, useEffect} = React;
+
+// ── CONFIGURE TEAM HERE ──────────────────────────
+// To add/remove team members, edit this object only.
+// role: 'abdm' = field member | 'bdm' = manager | 'gm' = GM (sees all)
+const USERS = {
+  'ABDM01': { name:'Tarun',         role:'abdm', password:'tarun@123'   },
+  'ABDM02': { name:'Anoop Jha',     role:'abdm', password:'anoop@123'   },
+  'BDM01':  { name:'Gautam Grover', role:'bdm',  password:'bdm@123'     },
+  'GM01':   { name:'Sandeep Kumar', role:'gm',   password:'gm@123'      },
+};
+const MEMBER_IDS = Object.keys(USERS).filter(k => USERS[k].role === 'abdm');
+
+// ── DATA CONSTANTS ───────────────────────────────
+const TATA_D  = ["Tata.ev S-14, Gurgaon","Tata.ev S-47, Gurgaon","Sagar Sec 63, Noida","Sagar Sec 5, Noida","Sagar Gaur City, Noida","Frontier Dwarka S-20","Jasper Safdarjung","Cherish Rohini","Autovikas Wazirpur","Sagar Greater Noida","Sagar Patparganj","Sagar Dilshad Garden"];
+const NT_D    = ["BYD Moti Nagar","Koncept Sec-2, Noida"];
+const ALL_D   = ["",...TATA_D,...NT_D,"Other"];
+const PURPOSES= ["","Training","Meeting","Objection Handling","Feedback Collection","Incentive Disbursement","Lead Review","Other"];
+const DESIG   = ["","GM","SM","TL","CA","Other"];
+const VSTATUS = ["","Done","Pending","Cancelled"];
+const TOOLS   = [
+  {id:'gst', name:'Ground Sales Input Tool',         hint:'Daily lead entries — CRM / ground tool'},
+  {id:'lsu', name:'Lead Status Update',              hint:'P90 / P50 / NI / DNP status for all leads'},
+  {id:'tt',  name:'Training Tool',                   hint:"Log today's training session record"},
+  {id:'cps', name:'Customer Profiling Survey Tool',  hint:'Profile for newly onboarded customers'},
+  {id:'sbd', name:'Sales cum BD Engagement Tool',    hint:'BD activity + sales engagement log'},
+  {id:'dft', name:'Delivery Forecast Tool',          hint:'Update expected delivery forecast'},
+  {id:'dti', name:'Dealership Team Incentive',       hint:'Update incentive disbursement if applicable'},
+];
+const N='#222E53', T='#00B5AD', P='#F3688D';
+
+const mkV = () => ({dealer:'',time:'',meetWith:'',desig:'',purpose:'',agenda:'',status:''});
+const mkF = () => ({
+  date: new Date().toISOString().split('T')[0],
+  visits: Array(5).fill(0).map(mkV),
+  tools: Object.fromEntries(TOOLS.map(t=>[t.id,''])),
+  trainings:'', totalLeads:'', enqLeads:'', leadQuality:'',
+  p90today:'', p90value:'', enrollForms:'', mtdRevenue:'',
+  p50:'', dnp:'', ni:'', p90long:'', handTotal:'',
+  insight:'', escalation:'', bdmRemark:'', status:'draft',
+});
+
+// ── FIREBASE STORAGE ─────────────────────────────
+const RK = (uid, date) => `${uid}_${date}`;
+
+const saveRpt = async (uid, name, data) => {
+  const payload = {...data, memberName:name, memberId:uid, savedAt:new Date().toISOString()};
+  await db.collection('reports').doc(RK(uid, data.date)).set(payload);
+  return payload;
+};
+const loadRpt = async (uid, date) => {
+  try {
+    const snap = await db.collection('reports').doc(RK(uid,date)).get();
+    return snap.exists ? snap.data() : null;
+  } catch(e) { console.error(e); return null; }
+};
+const listOwn = async (uid) => {
+  try {
+    const snap = await db.collection('reports').where('memberId','==',uid).get();
+    return snap.docs.map(d=>({key:d.id,...d.data()})).sort((a,b)=>b.date.localeCompare(a.date));
+  } catch(e) { console.error(e); return []; }
+};
+const listAll = async () => {
+  try {
+    const snap = await db.collection('reports').get();
+    return snap.docs.map(d=>({key:d.id,...d.data()})).sort((a,b)=>b.date.localeCompare(a.date));
+  } catch(e) { console.error(e); return []; }
+};
+const saveRemark = async (uid, date, remark) => {
+  const ex = await loadRpt(uid, date);
+  if (!ex) return;
+  await saveRpt(uid, ex.memberName, {...ex, bdmRemark:remark});
+};
+
+// ── UI ATOMS ─────────────────────────────────────
+const Inp = ({label,value,onChange,type='text',hint,ph}) => (
+  <div style={{marginBottom:12}}>
+    {label && <label style={{fontSize:11,fontWeight:700,color:N,display:'block',marginBottom:4,textTransform:'uppercase',letterSpacing:.4}}>{label}</label>}
+    <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={ph||''}
+      style={{width:'100%',padding:'8px 11px',border:'1.5px solid #CBD5E1',borderRadius:6,fontSize:13,outline:'none'}}
+      onFocus={e=>e.target.style.borderColor=T} onBlur={e=>e.target.style.borderColor='#CBD5E1'}/>
+    {hint && <div style={{fontSize:10,color:'#9CA3AF',marginTop:3,fontStyle:'italic'}}>{hint}</div>}
+  </div>
+);
+const Sel = ({label,value,onChange,options}) => (
+  <div style={{marginBottom:12}}>
+    {label && <label style={{fontSize:11,fontWeight:700,color:N,display:'block',marginBottom:4,textTransform:'uppercase',letterSpacing:.4}}>{label}</label>}
+    <select value={value} onChange={e=>onChange(e.target.value)} style={{width:'100%',padding:'8px 11px',border:'1.5px solid #CBD5E1',borderRadius:6,fontSize:13,background:'white',outline:'none'}}>
+      {options.map(o=><option key={o} value={o}>{o||'— Select —'}</option>)}
+    </select>
+  </div>
+);
+const Txt = ({label,value,onChange,rows=3,hint}) => (
+  <div style={{marginBottom:12}}>
+    {label && <label style={{fontSize:11,fontWeight:700,color:N,display:'block',marginBottom:4,textTransform:'uppercase',letterSpacing:.4}}>{label}</label>}
+    <textarea value={value} onChange={e=>onChange(e.target.value)} rows={rows}
+      style={{width:'100%',padding:'8px 11px',border:'1.5px solid #CBD5E1',borderRadius:6,fontSize:13,resize:'vertical',outline:'none'}}
+      onFocus={e=>e.target.style.borderColor=T} onBlur={e=>e.target.style.borderColor='#CBD5E1'}/>
+    {hint && <div style={{fontSize:10,color:'#9CA3AF',marginTop:3,fontStyle:'italic'}}>{hint}</div>}
+  </div>
+);
+const Badge = ({status}) => {
+  const c = status==='submitted' ? {bg:'#D1FAE5',tc:'#065F46'} : {bg:'#FEF3C7',tc:'#92400E'};
+  return <span style={{fontSize:11,fontWeight:700,padding:'2px 9px',borderRadius:20,background:c.bg,color:c.tc}}>{status==='submitted'?'Submitted':'Draft'}</span>;
+};
+const Btn = ({children,onClick,v='primary',sm,disabled}) => {
+  const s={primary:{background:N,color:'white',border:`2px solid ${N}`},secondary:{background:'white',color:N,border:`2px solid ${N}`},teal:{background:T,color:'white',border:`2px solid ${T}`},ghost:{background:'transparent',color:'#6B7280',border:'1.5px solid #E2E8F0'}};
+  return <button onClick={onClick} disabled={disabled} style={{...s[v],padding:sm?'6px 13px':'9px 18px',borderRadius:7,fontWeight:700,fontSize:sm?12:13,cursor:disabled?'not-allowed':'pointer',opacity:disabled?.5:1}}>{children}</button>;
+};
+const Card = ({code,title,sub,color,children}) => (
+  <div style={{background:'white',border:'1px solid #E2E8F0',borderRadius:10,marginBottom:18,overflow:'hidden'}}>
+    <div style={{background:color||N,padding:'9px 14px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+      <div style={{display:'flex',alignItems:'center',gap:9}}>
+        <span style={{background:'rgba(255,255,255,.2)',color:'white',fontWeight:900,fontSize:11,padding:'1px 7px',borderRadius:3}}>{code}</span>
+        <span style={{color:'white',fontWeight:700,fontSize:13}}>{title}</span>
+      </div>
+      {sub && <span style={{color:'rgba(255,255,255,.7)',fontSize:11}}>{sub}</span>}
+    </div>
+    <div style={{padding:16}}>{children}</div>
+  </div>
+);
+const Nav = ({user,uid,onLogout,title}) => (
+  <div style={{background:N,padding:'11px 22px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:100,boxShadow:'0 2px 10px rgba(0,0,0,.15)'}}>
+    <div>
+      <div style={{fontSize:14,fontWeight:800,color:'white'}}>Hopcharge · Field Report</div>
+      <div style={{fontSize:10,color:'rgba(255,255,255,.4)'}}>{title} · {uid}</div>
+    </div>
+    <div style={{display:'flex',alignItems:'center',gap:10}}>
+      <div style={{textAlign:'right'}}><div style={{fontSize:13,fontWeight:700,color:'white'}}>{user.name}</div><div style={{fontSize:10,color:'rgba(255,255,255,.4)'}}>{user.role.toUpperCase()}</div></div>
+      <button onClick={onLogout} style={{padding:'5px 13px',background:'rgba(255,255,255,.1)',color:'white',border:'1px solid rgba(255,255,255,.2)',borderRadius:6,fontSize:12,cursor:'pointer'}}>Sign Out</button>
+    </div>
+  </div>
+);
+const Spinner = () => <div style={{display:'flex',justifyContent:'center',padding:40}}><div style={{width:28,height:28,border:'3px solid #E2E8F0',borderTopColor:T,borderRadius:'50%',animation:'spin 1s linear infinite'}}></div></div>;
+
+// ── LOGIN ────────────────────────────────────────
+function Login({onLogin}) {
+  const [id,setId]=useState(''); const [pw,setPw]=useState(''); const [err,setErr]=useState('');
+  const go = () => {
+    const uid = id.trim().toUpperCase();
+    const u = USERS[uid];
+    if (u && u.password === pw) { setErr(''); onLogin(uid, u); }
+    else setErr('Invalid ID or password.');
+  };
+  return (
+    <div style={{minHeight:'100vh',background:'linear-gradient(135deg,#1a2240 0%,#222E53 60%,#2d4070 100%)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+      <div style={{width:'100%',maxWidth:380,background:'white',borderRadius:16,boxShadow:'0 8px 48px rgba(0,0,0,.25)',overflow:'hidden'}}>
+        <div style={{background:N,padding:'28px 30px 20px',textAlign:'center'}}>
+          <div style={{width:52,height:52,background:'rgba(255,255,255,.1)',borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 12px',fontSize:24}}>⚡</div>
+          <div style={{fontSize:20,fontWeight:800,color:'white'}}>Daily Field Report</div>
+          <div style={{fontSize:12,color:'rgba(255,255,255,.45)',marginTop:4}}>ABDM · NCR Ground Sales · Hopcharge</div>
+        </div>
+        <div style={{padding:'28px 30px'}}>
+          <div style={{marginBottom:14}}>
+            <label style={{fontSize:11,fontWeight:700,color:N,display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:.4}}>Member ID</label>
+            <input value={id} onChange={e=>setId(e.target.value)} placeholder="e.g. ABDM01" onKeyDown={e=>e.key==='Enter'&&go()}
+              style={{width:'100%',padding:'10px 14px',border:'1.5px solid #CBD5E1',borderRadius:7,fontSize:14,outline:'none'}}/>
+          </div>
+          <div style={{marginBottom:18}}>
+            <label style={{fontSize:11,fontWeight:700,color:N,display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:.4}}>Password</label>
+            <input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="Enter password" onKeyDown={e=>e.key==='Enter'&&go()}
+              style={{width:'100%',padding:'10px 14px',border:'1.5px solid #CBD5E1',borderRadius:7,fontSize:14,outline:'none'}}/>
+          </div>
+          {err && <div style={{fontSize:12,color:P,marginBottom:12,padding:'8px 12px',background:'#FEF0F4',borderRadius:6,fontWeight:600}}>{err}</div>}
+          <button onClick={go} style={{width:'100%',padding:12,background:N,color:'white',border:'none',borderRadius:8,fontSize:14,fontWeight:700,cursor:'pointer',marginBottom:16}}>Sign In →</button>
+          <div style={{padding:12,background:'#F0F4F8',borderRadius:8,fontSize:11,color:'#64748B',lineHeight:1.8}}>
+            <strong style={{color:N}}>Login Credentials</strong><br/>
+            ABDM01 / tarun@123 &nbsp;·&nbsp; ABDM02 / anoop@123<br/>
+            BDM01 / bdm@123 &nbsp;·&nbsp; GM01 / gm@123
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── FORM STEPS ───────────────────────────────────
+function StepVisits({form,setForm}) {
+  const updV = (i,k,v) => setForm(p=>{const vs=[...p.visits];vs[i]={...vs[i],[k]:v};return{...p,visits:vs};});
+  return (
+    <Card code="A" title="Morning Visit Plan" sub="Photo → WhatsApp by 11:00 AM" color={N}>
+      <div style={{fontSize:11,color:'#6B7280',marginBottom:14,padding:'8px 12px',background:'#FFF8E1',borderRadius:6,borderLeft:'3px solid #F59E0B'}}>
+        ★ Fill plan before 11 AM · Take photo · Share on WhatsApp team group
+      </div>
+      {form.visits.map((v,i) => (
+        <div key={i} style={{border:'1px solid #E2E8F0',borderRadius:8,padding:14,marginBottom:10,background:i%2?'#FAFBFC':'white'}}>
+          <div style={{fontSize:11,fontWeight:800,color:T,marginBottom:10}}>VISIT {i+1}</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 14px'}}>
+            <Sel label="Dealership" value={v.dealer} onChange={val=>updV(i,'dealer',val)} options={ALL_D}/>
+            <Inp label="Visit Time" value={v.time} onChange={val=>updV(i,'time',val)} ph="e.g. 10:00 AM – 12:00 PM"/>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'0 14px'}}>
+            <Inp label="Meet With" value={v.meetWith} onChange={val=>updV(i,'meetWith',val)} ph="Name"/>
+            <Sel label="Designation" value={v.desig} onChange={val=>updV(i,'desig',val)} options={DESIG}/>
+            <Sel label="Purpose" value={v.purpose} onChange={val=>updV(i,'purpose',val)} options={PURPOSES}/>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'2fr 1fr',gap:'0 14px'}}>
+            <Txt label="Agenda / Key Points" value={v.agenda} onChange={val=>updV(i,'agenda',val)} rows={2} hint="Lead Collection / Training / Feedback / Incentive / Other"/>
+            <Sel label="Status" value={v.status} onChange={val=>updV(i,'status',val)} options={VSTATUS}/>
+          </div>
+        </div>
+      ))}
+    </Card>
+  );
+}
+
+function StepTools({form,setForm}) {
+  const updT = (id,v) => setForm(p=>({...p,tools:{...p.tools,[id]:v}}));
+  const filled = Object.values(form.tools).filter(Boolean).length;
+  return (
+    <Card code="B" title="Tool Compliance Tracker" sub={`${filled}/7 marked`} color={P}>
+      <div style={{fontSize:11,color:'#6B7280',marginBottom:14}}>Mark YES / NO / NA for each tool before 7:00 PM</div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+        {TOOLS.map(t => (
+          <div key={t.id} style={{padding:'11px 14px',border:'1px solid #E2E8F0',borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,background:form.tools[t.id]?'#F7FFFE':'white'}}>
+            <div><div style={{fontSize:12,fontWeight:700,color:N}}>{t.name}</div><div style={{fontSize:10,color:'#9CA3AF',fontStyle:'italic',marginTop:2}}>{t.hint}</div></div>
+            <div style={{display:'flex',gap:5,flexShrink:0}}>
+              {['YES','NO','NA'].map(o=>(
+                <button key={o} onClick={()=>updT(t.id,o)} style={{padding:'4px 9px',borderRadius:5,border:`1.5px solid ${form.tools[t.id]===o?(o==='YES'?T:o==='NO'?P:'#9CA3AF'):'#CBD5E1'}`,background:form.tools[t.id]===o?(o==='YES'?'#E6FAF9':o==='NO'?'#FEF0F4':'#F3F4F6'):'white',color:form.tools[t.id]===o?(o==='YES'?T:o==='NO'?P:'#6B7280'):'#9CA3AF',fontWeight:700,fontSize:11,cursor:'pointer'}}>
+                  {o}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{marginTop:14,padding:'10px 14px',background:'#F0F4F8',borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <span style={{fontWeight:700,color:N,fontSize:13}}>EOD Compliance Score</span>
+        <span style={{fontWeight:800,fontSize:20,color:filled===7?T:filled>=4?'#F59E0B':P}}>{filled} / 7</span>
+      </div>
+    </Card>
+  );
+}
+
+function StepSales({form,setForm}) {
+  const upd = (k,v) => setForm(p=>({...p,[k]:v}));
+  return (
+    <Card code="C" title="Daily Sales & BD Tracking" sub="Target ₹21,000 · P90 ≥2/day · Quality >60%" color={T}>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 14px'}}>
+        <Inp label="No. of Trainings Conducted" value={form.trainings} onChange={v=>upd('trainings',v)} hint="Sessions held today"/>
+        <Inp label="Total Leads Generated Today" value={form.totalLeads} onChange={v=>upd('totalLeads',v)} hint="From dealership (Enq+Booking+Delivery) · Min 3/day"/>
+        <Inp label="Enquiry + Booking Stage Leads" value={form.enqLeads} onChange={v=>upd('enqLeads',v)} hint="Count from above total"/>
+        <Inp label="Lead Quality %" value={form.leadQuality} onChange={v=>upd('leadQuality',v)} hint="Enq+Bkg ÷ Total Leads · Target >60%"/>
+        <Inp label="P90 Leads Today / Total P90 Active" value={form.p90today} onChange={v=>upd('p90today',v)} hint="e.g. 2/10 (today/pipeline) · Target ≥2"/>
+        <Inp label="Daily P90 Value / Total Active P90 Value" value={form.p90value} onChange={v=>upd('p90value',v)} hint="e.g. 2×3.3 + 1×Exp / 5×3.3 + 2×Exp"/>
+        <Inp label="Enrollment Forms Filled" value={form.enrollForms} onChange={v=>upd('enrollForms',v)} hint="#Customer profile forms"/>
+        <Inp label="MTD Revenue Achieved (₹)" value={form.mtdRevenue} onChange={v=>upd('mtdRevenue',v)} hint="Running cumulative total · ₹21,000/day run rate"/>
+      </div>
+    </Card>
+  );
+}
+
+function StepHandover({form,setForm}) {
+  const upd = (k,v) => setForm(p=>({...p,[k]:v}));
+  const stages = [{k:'p50',l:'P50',s:'Warm, Not Ready'},{k:'dnp',l:'DNP',s:'Did Not Pick'},{k:'ni',l:'NI',s:'Declined'},{k:'p90long',l:'P90 >15d',s:'Long Cycle'},{k:'handTotal',l:'TOTAL',s:'Handed Over',b:true}];
+  return (
+    <>
+      <Card code="D" title="Lead Handover — Inside Sales" sub="P50 / DNP / NI / CMB / P90 >15 Days" color={P}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:9}}>
+          {stages.map(st => (
+            <div key={st.k} style={{textAlign:'center',padding:12,border:`2px solid ${st.b?N:'#E2E8F0'}`,borderRadius:8,background:st.b?N:'white'}}>
+              <div style={{fontSize:11,fontWeight:800,color:st.b?'white':N,marginBottom:2}}>{st.l}</div>
+              <div style={{fontSize:9,color:st.b?'rgba(255,255,255,.4)':'#9CA3AF',marginBottom:8}}>({st.s})</div>
+              <input type="number" value={form[st.k]} onChange={e=>upd(st.k,e.target.value)} min={0}
+                style={{width:'100%',padding:'6px 2px',textAlign:'center',border:`1.5px solid ${st.b?'rgba(255,255,255,.2)':'#CBD5E1'}`,borderRadius:6,fontSize:18,fontWeight:800,background:st.b?'rgba(255,255,255,.08)':'white',color:st.b?'white':N,boxSizing:'border-box',outline:'none'}}/>
+            </div>
+          ))}
+        </div>
+      </Card>
+      <Card code="E" title="Insight / Observation / Escalation" color={N}>
+        <Txt label="Insight of the Day" value={form.insight} onChange={v=>upd('insight',v)} rows={3} hint="Competitor activity / dealer feedback / ground observation / new learning"/>
+        <Txt label="Escalation / Blocker (Flag for BDM)" value={form.escalation} onChange={v=>upd('escalation',v)} rows={2} hint="Requires BDM attention"/>
+      </Card>
+    </>
+  );
+}
+
+// ── FORM WRAPPER ─────────────────────────────────
+function FormView({userId,user,init,onBack,onSubmit}) {
+  const [form,setForm] = useState(init||mkF());
+  const [step,setStep] = useState(1);
+  const [saving,setSaving] = useState(false);
+  const [toast,setToast] = useState('');
+  const steps = ['Visit Plan','Tool Compliance','Sales Metrics','Handover & Insight'];
+
+  const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(''),2500); };
+
+  const doSave = async (submit=false) => {
+    setSaving(true);
+    try {
+      const saved = await saveRpt(userId, user.name, {...form, status:submit?'submitted':'draft'});
+      showToast(submit?'✓ Report submitted successfully!':'Draft saved.');
+      if (submit) setTimeout(()=>onSubmit(saved), 700);
+    } catch(e) {
+      showToast('Error saving — check your connection.');
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div style={{minHeight:'100vh',background:'#F0F4F8'}}>
+      <Nav user={user} uid={userId} onLogout={()=>{}} title="Filing Report"/>
+      {/* Top bar */}
+      <div style={{background:'white',borderBottom:'1px solid #E2E8F0',padding:'9px 22px',display:'flex',alignItems:'center',gap:14}}>
+        <input type="date" value={form.date} onChange={e=>setForm(p=>({...p,date:e.target.value}))}
+          style={{padding:'5px 9px',border:'1.5px solid #CBD5E1',borderRadius:6,fontSize:13,outline:'none'}}/>
+        <div style={{marginLeft:'auto',display:'flex',gap:8}}>
+          <Btn v="ghost" sm onClick={onBack}>← Back</Btn>
+          <Btn v="secondary" sm onClick={()=>doSave(false)} disabled={saving}>Save Draft</Btn>
+        </div>
+      </div>
+      {/* Steps */}
+      <div style={{background:'white',borderBottom:'1px solid #E2E8F0',display:'flex',overflowX:'auto'}}>
+        {steps.map((s,i) => (
+          <button key={i} onClick={()=>setStep(i+1)} style={{padding:'10px 16px',border:'none',background:'transparent',fontSize:12,fontWeight:step===i+1?800:500,color:step===i+1?T:'#6B7280',cursor:'pointer',borderBottom:step===i+1?`2.5px solid ${T}`:'2.5px solid transparent',whiteSpace:'nowrap',flexShrink:0}}>
+            <span style={{marginRight:5,fontSize:10,background:step===i+1?T:'#CBD5E1',color:'white',borderRadius:20,padding:'1px 6px',fontWeight:800}}>{i+1}</span>{s}
+          </button>
+        ))}
+      </div>
+      {/* Toast */}
+      {toast && (
+        <div style={{background:toast.includes('✓')?'#D1FAE5':toast.includes('Error')?'#FEE2E2':'#FEF3C7',color:toast.includes('✓')?'#065F46':toast.includes('Error')?'#991B1B':'#92400E',padding:'10px 22px',fontSize:13,fontWeight:700}}>{toast}</div>
+      )}
+      {/* Form content */}
+      <div style={{maxWidth:940,margin:'0 auto',padding:'20px 16px'}}>
+        {step===1 && <StepVisits form={form} setForm={setForm}/>}
+        {step===2 && <StepTools form={form} setForm={setForm}/>}
+        {step===3 && <StepSales form={form} setForm={setForm}/>}
+        {step===4 && <StepHandover form={form} setForm={setForm}/>}
+        <div style={{display:'flex',justifyContent:'space-between',marginTop:4,paddingBottom:24}}>
+          <div>{step>1 && <Btn v="secondary" onClick={()=>setStep(s=>s-1)}>← Previous</Btn>}</div>
+          <div style={{display:'flex',gap:8}}>
+            {step<4 && <Btn v="teal" onClick={()=>setStep(s=>s+1)}>Next →</Btn>}
+            {step===4 && <Btn v="teal" onClick={()=>doSave(true)} disabled={saving}>{saving?'Submitting…':'Submit Report ✓'}</Btn>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── PRINT FUNCTION ───────────────────────────────
+function printReport(report, remarkOverride) {
+  const V = x => x || '—';
+  const w = window.open('', '_blank');
+  const remark = remarkOverride !== undefined ? remarkOverride : (report.bdmRemark || '');
+  w.document.write(`<!DOCTYPE html><html><head><title>Field Report — ${report.memberName} — ${report.date}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0} body{font-family:Arial,sans-serif;font-size:10.5px;color:#1a1a2e;background:white;padding:10mm}
+    h1{font-size:13px;font-weight:900;margin-bottom:8px}
+    .hrow{display:flex;gap:18px;border-bottom:2px solid #1a1a2e;padding-bottom:8px;margin-bottom:12px}
+    .hf{display:flex;gap:5px;align-items:center;font-size:9px} .hfv{border-bottom:1px solid #555;min-width:90px;font-weight:700;font-size:11px;padding:1px 4px}
+    .sec{margin-bottom:11px;border:1px solid #555;border-radius:3px;overflow:hidden}
+    .sh{background:#1a1a2e;color:white;padding:5px 10px;font-size:10px;font-weight:800;display:flex;gap:9px;align-items:center}
+    .sb{padding:10px}
+    table{width:100%;border-collapse:collapse;font-size:9px} th,td{border:1px solid #999;padding:4px 6px;text-align:left;vertical-align:top} th{background:#ebebeb;font-weight:800}
+    .mg{display:grid;grid-template-columns:repeat(4,1fr);gap:7px} .mc{border:1px solid #555;padding:8px;border-radius:2px}
+    .ml{font-size:8.5px;font-weight:800;margin-bottom:5px} .mv{font-size:16px;font-weight:900;border-top:1px solid #ccc;padding-top:4px;margin-top:2px}
+    .dg{display:grid;grid-template-columns:repeat(5,1fr);gap:7px} .db{border:1.5px solid #555;padding:8px;text-align:center;border-radius:2px}
+    .kg{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:9px 0} .kc{background:#ebebeb;padding:4px 6px;font-size:8px;font-weight:800;text-align:center;border-radius:2px}
+    .tg{display:grid;grid-template-columns:1fr 1fr;gap:7px} .ti{border:1px solid #ccc;padding:7px 10px;display:flex;justify-content:space-between;align-items:center;border-radius:2px}
+    .wl{border:1px solid #ccc;padding:7px;min-height:32px;font-size:10px;border-radius:2px;margin-bottom:10px}
+    .pg2{page-break-before:always;padding-top:8px}
+    @media print{body{padding:7mm}@page{margin:8mm}}
+  </style></head><body>
+  <h1>DAILY FIELD REPORT — ABDM · NCR GROUND SALES <span style="font-size:9px;font-weight:400">&nbsp;Page 1 of 2</span></h1>
+  <div class="hrow">
+    <div class="hf"><b>Name:</b><span class="hfv">${V(report.memberName)}</span></div>
+    <div class="hf"><b>ID:</b><span class="hfv">${V(report.memberId)}</span></div>
+    <div class="hf"><b>Date:</b><span class="hfv">${V(report.date)}</span></div>
+    <div class="hf"><b>Status:</b><span class="hfv" style="color:${report.status==='submitted'?'#065f46':'#92400e'}">${(report.status||'draft').toUpperCase()}</span></div>
+  </div>
+  <div class="sec"><div class="sh"><span style="background:rgba(255,255,255,.2);padding:1px 7px;border-radius:2px">A</span>MORNING VISIT PLAN · Photo → WhatsApp Group by 11:00 AM</div>
+  <div class="sb"><table><thead><tr><th>#</th><th>Dealership</th><th>Time</th><th>Meet With</th><th>Desig.</th><th>Purpose</th><th>Agenda / Key Points</th><th>Status</th></tr></thead>
+  <tbody>${(report.visits||[]).map((v,i)=>`<tr><td>${i+1}</td><td>${V(v.dealer)}</td><td>${V(v.time)}</td><td>${V(v.meetWith)}</td><td>${V(v.desig)}</td><td>${V(v.purpose)}</td><td>${V(v.agenda)}</td><td>${V(v.status)}</td></tr>`).join('')}</tbody></table></div></div>
+  <div class="sec"><div class="sh"><span style="background:rgba(255,255,255,.2);padding:1px 7px;border-radius:2px">B</span>TOOL COMPLIANCE TRACKER · Complete before 7:00 PM</div>
+  <div class="sb"><div class="tg">${TOOLS.map(t=>`<div class="ti"><div><div style="font-size:10px;font-weight:800">${t.name}</div><div style="font-size:8px;color:#888;font-style:italic">${t.hint}</div></div><span style="font-weight:800;font-size:13px;border:1px solid #555;padding:2px 10px;border-radius:3px">${report.tools?.[t.id]||'—'}</span></div>`).join('')}</div></div></div>
+  <div class="pg2">
+  <h1>DAILY FIELD REPORT — Page 2 of 2</h1>
+  <div class="sec"><div class="sh"><span style="background:rgba(255,255,255,.2);padding:1px 7px;border-radius:2px">C</span>DAILY SALES & BD TRACKING · Target: ₹21,000 · P90: ≥2/day · Quality: >60%</div>
+  <div class="sb"><div class="mg">
+  ${[{l:'Trainings Conducted',v:report.trainings},{l:'Total Leads Today',v:report.totalLeads},{l:'Enq+Booking Leads',v:report.enqLeads},{l:'Lead Quality %',v:report.leadQuality},{l:'P90 Today / Total Active',v:report.p90today},{l:'Daily P90 Value / Total',v:report.p90value},{l:'Enrollment Forms',v:report.enrollForms},{l:'MTD Revenue (₹)',v:report.mtdRevenue}].map(m=>`<div class="mc"><div class="ml">${m.l}</div><div class="mv">${V(m.v)}</div></div>`).join('')}
+  </div></div></div>
+  <div class="sec"><div class="sh"><span style="background:rgba(255,255,255,.2);padding:1px 7px;border-radius:2px">D</span>LEAD HANDOVER — INSIDE SALES · P50 / DNP / Not Interested / CMB / P90 >15 Days</div>
+  <div class="sb"><div class="dg">
+  ${[{l:'P50',s:'Warm, Not Ready',v:report.p50},{l:'DNP',s:'Did Not Pick',v:report.dnp},{l:'Not Interested',s:'Declined',v:report.ni},{l:'P90 >15d',s:'Long Cycle',v:report.p90long},{l:'TOTAL',s:'Handed Over',v:report.handTotal,b:true}].map(st=>`<div class="db" style="${st.b?'background:#1a1a2e;color:white':''}"><div style="font-size:10px;font-weight:800">${st.l}</div><div style="font-size:8px;color:${st.b?'rgba(255,255,255,.4)':'#888'};margin-bottom:6px">(${st.s})</div><div style="font-size:22px;font-weight:900">${V(st.v)}</div></div>`).join('')}
+  </div></div></div>
+  <div class="kg">${[['Daily Target','20×3.3/Hopcharge-X'],['P90/Day','≥2 Leads'],['Lead Quality','Enq+Bkg >60%'],['AI Scan','>50%'],['P90 Conv.','>90%'],['Tata Appr.','>80%']].map(([l,v])=>`<div class="kc">${l}: ${v}</div>`).join('')}</div>
+  <div class="sec"><div class="sh"><span style="background:rgba(255,255,255,.2);padding:1px 7px;border-radius:2px">E</span>INSIGHT / OBSERVATION / ESCALATION</div>
+  <div class="sb">
+    <div style="font-size:9px;font-weight:800;margin-bottom:4px">INSIGHT OF THE DAY:</div><div class="wl">${V(report.insight)}</div>
+    <div style="font-size:9px;font-weight:800;margin-bottom:4px">ESCALATION / BLOCKER:</div><div class="wl">${V(report.escalation)}</div>
+    <div style="font-size:9px;font-weight:800;margin-bottom:4px">BDM REMARK:</div><div class="wl">${V(remark)}</div>
+  </div></div>
+  </div></body></html>`);
+  w.document.close();
+  setTimeout(()=>w.print(), 400);
+}
+
+// ── REPORT PREVIEW ───────────────────────────────
+function Preview({report,userId,user,onBack,canAddRemark}) {
+  const [remark,setRemark] = useState(report.bdmRemark||'');
+  const [remarksaved,setRemarkSaved] = useState(false);
+
+  return (
+    <div style={{minHeight:'100vh',background:'#F0F4F8'}}>
+      <Nav user={user} uid={userId} onLogout={()=>{}} title="Report View"/>
+      <div style={{background:'white',borderBottom:'1px solid #E2E8F0',padding:'9px 22px',display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+        <Btn v="ghost" sm onClick={onBack}>← Back</Btn>
+        <div style={{fontSize:14,fontWeight:700,color:N,flex:1}}>{report.memberName} — {report.date} &nbsp;<Badge status={report.status}/></div>
+        <Btn v="teal" sm onClick={()=>printReport(report, canAddRemark?remark:undefined)}>🖨 Print / Save PDF</Btn>
+      </div>
+      <div style={{maxWidth:900,margin:'0 auto',padding:'20px 16px'}}>
+        {/* Visit Plan */}
+        <Card code="A" title="Morning Visit Plan" color={N}>
+          <div style={{overflowX:'auto'}}>
+            <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
+              <thead><tr style={{background:'#F0F4F8'}}>{['#','Dealership','Time','Meet With','Desig.','Purpose','Agenda / Key Points','Status'].map(h=><th key={h} style={{padding:'7px 9px',textAlign:'left',fontWeight:800,color:N,fontSize:10,border:'1px solid #E2E8F0'}}>{h}</th>)}</tr></thead>
+              <tbody>{(report.visits||[]).map((v,i)=>(
+                <tr key={i} style={{background:i%2?'#FAFBFC':'white'}}>
+                  <td style={{padding:'7px 9px',border:'1px solid #E2E8F0',fontWeight:700,color:'#9CA3AF'}}>{i+1}</td>
+                  {[v.dealer,v.time,v.meetWith,v.desig,v.purpose,v.agenda,v.status].map((c,j)=><td key={j} style={{padding:'7px 9px',border:'1px solid #E2E8F0',fontSize:12,color:c?N:'#CBD5E1'}}>{c||'—'}</td>)}
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        </Card>
+        {/* Tools */}
+        <Card code="B" title="Tool Compliance" color={P}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:7}}>
+            {TOOLS.map(t => {const v=report.tools?.[t.id]; return (
+              <div key={t.id} style={{padding:'9px 12px',border:'1px solid #E2E8F0',borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center',background:v==='YES'?'#F0FDF9':v==='NO'?'#FFF5F5':'white'}}>
+                <div><div style={{fontSize:12,fontWeight:700,color:N}}>{t.name}</div><div style={{fontSize:10,color:'#9CA3AF',fontStyle:'italic'}}>{t.hint}</div></div>
+                <span style={{fontWeight:800,fontSize:12,padding:'2px 10px',border:`1.5px solid ${v==='YES'?T:v==='NO'?P:'#E2E8F0'}`,borderRadius:20,color:v==='YES'?T:v==='NO'?P:'#9CA3AF',flexShrink:0}}>{v||'—'}</span>
+              </div>
+            );})}
+          </div>
+        </Card>
+        {/* Sales */}
+        <Card code="C" title="Daily Sales & BD Tracking" sub="₹21,000/day target" color={T}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:9}}>
+            {[{l:'Trainings',v:report.trainings},{l:'Total Leads',v:report.totalLeads},{l:'Enq+Bkg Leads',v:report.enqLeads},{l:'Lead Quality %',v:report.leadQuality},{l:'P90 Today/Active',v:report.p90today},{l:'P90 Value',v:report.p90value},{l:'Enrollment Forms',v:report.enrollForms},{l:'MTD Revenue (₹)',v:report.mtdRevenue}].map(m=>(
+              <div key={m.l} style={{padding:11,border:'1px solid #E2E8F0',borderRadius:8,background:'#F7FFFE'}}>
+                <div style={{fontSize:10,fontWeight:700,color:'#6B7280',marginBottom:5}}>{m.l}</div>
+                <div style={{fontSize:22,fontWeight:900,color:N}}>{m.v||'—'}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+        {/* Handover */}
+        <Card code="D" title="Lead Handover — Inside Sales" color={P}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:9}}>
+            {[{l:'P50',s:'Warm, Not Ready',v:report.p50},{l:'DNP',s:'Did Not Pick',v:report.dnp},{l:'Not Interested',s:'Declined',v:report.ni},{l:'P90 >15d',s:'Long Cycle',v:report.p90long},{l:'TOTAL',s:'Handed Over',v:report.handTotal,b:true}].map(st=>(
+              <div key={st.l} style={{textAlign:'center',padding:12,border:`2px solid ${st.b?N:'#E2E8F0'}`,borderRadius:8,background:st.b?N:'white'}}>
+                <div style={{fontSize:11,fontWeight:800,color:st.b?'white':N}}>{st.l}</div>
+                <div style={{fontSize:9,color:st.b?'rgba(255,255,255,.45)':'#9CA3AF',marginBottom:6}}>({st.s})</div>
+                <div style={{fontSize:28,fontWeight:900,color:st.b?'white':T}}>{st.v||'—'}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+        {/* Insight + Remark */}
+        <Card code="E" title="Insight / Observation / Escalation" color={N}>
+          {report.insight && <><div style={{fontSize:10,fontWeight:700,color:'#6B7280',marginBottom:4}}>INSIGHT OF THE DAY</div><div style={{padding:'9px 12px',background:'#F7F8FC',borderRadius:7,fontSize:13,color:N,marginBottom:14,lineHeight:1.5}}>{report.insight}</div></>}
+          {report.escalation && <><div style={{fontSize:10,fontWeight:700,color:P,marginBottom:4}}>ESCALATION / BLOCKER</div><div style={{padding:'9px 12px',background:'#FFF5F5',border:'1px solid #FEE2E2',borderRadius:7,fontSize:13,color:N,marginBottom:14,lineHeight:1.5}}>{report.escalation}</div></>}
+          {canAddRemark ? (
+            <div>
+              <div style={{fontSize:10,fontWeight:700,color:N,marginBottom:6}}>BDM REMARK</div>
+              <textarea value={remark} onChange={e=>setRemark(e.target.value)} rows={2} placeholder="Add your remark here…"
+                style={{width:'100%',padding:'9px 12px',border:'2px solid #E2E8F0',borderRadius:7,fontSize:13,resize:'vertical',outline:'none'}}/>
+              <div style={{marginTop:8,display:'flex',alignItems:'center',gap:10}}>
+                <Btn v="primary" sm onClick={async()=>{await saveRemark(report.memberId,report.date,remark);setRemarkSaved(true);setTimeout(()=>setRemarkSaved(false),2500);}}>Save Remark</Btn>
+                {remarksaved && <span style={{fontSize:12,color:T,fontWeight:700}}>✓ Remark saved to Firebase</span>}
+              </div>
+            </div>
+          ) : report.bdmRemark && (
+            <><div style={{fontSize:10,fontWeight:700,color:N,marginBottom:4}}>BDM REMARK</div>
+            <div style={{padding:'9px 12px',background:'#FFF8E1',border:'1px solid #FDE68A',borderRadius:7,fontSize:13,color:N}}>{report.bdmRemark}</div></>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ── MEMBER DASHBOARD ─────────────────────────────
+function Dashboard({user,uid,onLogout,onNew,onView}) {
+  const [rpts,setRpts] = useState([]); const [loading,setLoading] = useState(true);
+  useEffect(()=>{listOwn(uid).then(r=>{setRpts(r);setLoading(false);});},[uid]);
+  const today = new Date().toISOString().split('T')[0];
+  const todayR = rpts.find(r=>r.date===today);
+  return (
+    <div style={{minHeight:'100vh',background:'#F0F4F8'}}>
+      <Nav user={user} uid={uid} onLogout={onLogout} title="My Dashboard"/>
+      <div style={{maxWidth:800,margin:'0 auto',padding:'22px 16px'}}>
+        <div style={{background:'white',borderRadius:12,padding:22,marginBottom:18,display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap',boxShadow:'0 2px 12px rgba(0,0,0,.06)'}}>
+          <div>
+            <div style={{fontSize:12,color:'#6B7280',marginBottom:3}}>{new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+            <div style={{fontSize:17,fontWeight:800,color:N}}>{todayR ? `Report ${todayR.status==='submitted'?'Submitted ✓':'— Draft Saved'}` : "No report filed yet today"}</div>
+          </div>
+          <div style={{display:'flex',gap:9}}>
+            {todayR && <Btn v="secondary" onClick={()=>onView(uid,today)}>View</Btn>}
+            <Btn v="teal" onClick={()=>onNew(today)}>{todayR?'Edit Report':'Fill Today\'s Report →'}</Btn>
+          </div>
+        </div>
+        <div style={{background:'white',borderRadius:12,padding:22,boxShadow:'0 2px 12px rgba(0,0,0,.06)'}}>
+          <div style={{fontSize:14,fontWeight:800,color:N,marginBottom:14}}>Report History</div>
+          {loading ? <Spinner/> : rpts.length===0 ?
+            <div style={{color:'#9CA3AF',fontSize:13,textAlign:'center',padding:24}}>No reports yet. File your first report above.</div> :
+            rpts.map(r => (
+              <div key={r.key} onClick={()=>onView(uid,r.date)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 14px',borderRadius:8,border:'1px solid #E2E8F0',marginBottom:7,cursor:'pointer',transition:'background .12s'}}
+                onMouseEnter={e=>e.currentTarget.style.background='#F7F8FC'} onMouseLeave={e=>e.currentTarget.style.background='white'}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:700,color:N}}>{new Date(r.date+'T12:00').toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'})}</div>
+                  <div style={{fontSize:10,color:'#9CA3AF',marginTop:2}}>Saved {r.savedAt?new Date(r.savedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'—'}</div>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:10}}><Badge status={r.status}/><span style={{color:'#CBD5E1',fontSize:18}}>›</span></div>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── MANAGER DASHBOARD ────────────────────────────
+function Manager({user,uid,onLogout,onView}) {
+  const [rpts,setRpts] = useState([]); const [loading,setLoading] = useState(true);
+  const [df,setDf] = useState(''); const [mf,setMf] = useState('');
+
+  useEffect(()=>{listAll().then(r=>{setRpts(r);setLoading(false);});},[]);
+
+  const today = new Date().toISOString().split('T')[0];
+  const todayR = rpts.filter(r=>r.date===today);
+  const filtered = rpts.filter(r=>{if(df&&r.date!==df)return false;if(mf&&r.memberId!==mf)return false;return true;});
+  const submittedToday = todayR.filter(r=>r.status==='submitted').length;
+
+  return (
+    <div style={{minHeight:'100vh',background:'#F0F4F8'}}>
+      <Nav user={user} uid={uid} onLogout={onLogout} title={`${user.role.toUpperCase()} Dashboard`}/>
+      <div style={{maxWidth:980,margin:'0 auto',padding:'22px 16px'}}>
+        {/* KPI tiles */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:14,marginBottom:18}}>
+          {[{l:'Submitted Today',v:`${submittedToday} / ${MEMBER_IDS.length}`,c:T,icon:'✅'},{l:'Active Team',v:MEMBER_IDS.length,c:N,icon:'👥'},{l:'Total Reports',v:rpts.length,c:P,icon:'📋'}].map(c=>(
+            <div key={c.l} style={{background:'white',borderRadius:12,padding:20,boxShadow:'0 2px 12px rgba(0,0,0,.06)'}}>
+              <div style={{fontSize:20,marginBottom:6}}>{c.icon}</div>
+              <div style={{fontSize:11,fontWeight:700,color:'#6B7280',marginBottom:6,textTransform:'uppercase',letterSpacing:.4}}>{c.l}</div>
+              <div style={{fontSize:32,fontWeight:900,color:c.c}}>{c.v}</div>
+            </div>
+          ))}
+        </div>
+        {/* Today's team status */}
+        <div style={{background:'white',borderRadius:12,padding:20,marginBottom:18,boxShadow:'0 2px 12px rgba(0,0,0,.06)'}}>
+          <div style={{fontSize:14,fontWeight:800,color:N,marginBottom:14}}>
+            Today's Report Status — {new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'})}
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:11}}>
+            {MEMBER_IDS.map(mid => {
+              const r = todayR.find(x=>x.memberId===mid);
+              return (
+                <div key={mid} style={{padding:16,border:`1.5px solid ${r?.status==='submitted'?T:r?.status==='draft'?'#F59E0B':'#E2E8F0'}`,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'space-between',background:r?.status==='submitted'?'#F0FDF9':r?.status==='draft'?'#FFFBEB':'white'}}>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:800,color:N}}>{USERS[mid]?.name}</div>
+                    <div style={{fontSize:11,color:'#9CA3AF'}}>{mid}</div>
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',gap:9}}>
+                    {r ? <><Badge status={r.status}/><button onClick={()=>onView(mid,today)} style={{padding:'5px 11px',background:N,color:'white',border:'none',borderRadius:6,fontSize:12,cursor:'pointer',fontWeight:700}}>View →</button></> :
+                    <span style={{fontSize:12,color:'#9CA3AF'}}>Not filed yet</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        {/* All reports */}
+        <div style={{background:'white',borderRadius:12,padding:20,boxShadow:'0 2px 12px rgba(0,0,0,.06)'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14,flexWrap:'wrap',gap:10}}>
+            <div style={{fontSize:14,fontWeight:800,color:N}}>All Reports</div>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+              <input type="date" value={df} onChange={e=>setDf(e.target.value)} style={{padding:'6px 10px',border:'1.5px solid #CBD5E1',borderRadius:6,fontSize:12,outline:'none'}}/>
+              <select value={mf} onChange={e=>setMf(e.target.value)} style={{padding:'6px 10px',border:'1.5px solid #CBD5E1',borderRadius:6,fontSize:12,background:'white',outline:'none'}}>
+                <option value="">All Members</option>
+                {MEMBER_IDS.map(m=><option key={m} value={m}>{USERS[m]?.name} ({m})</option>)}
+              </select>
+              {(df||mf) && <button onClick={()=>{setDf('');setMf('');}} style={{padding:'6px 11px',background:'#F3F4F6',border:'none',borderRadius:6,fontSize:12,cursor:'pointer',color:'#6B7280'}}>Clear ×</button>}
+              <button onClick={()=>listAll().then(r=>setRpts(r))} style={{padding:'6px 11px',background:'#F0F4F8',border:'1px solid #E2E8F0',borderRadius:6,fontSize:12,cursor:'pointer',color:N,fontWeight:700}}>↻ Refresh</button>
+            </div>
+          </div>
+          {loading ? <Spinner/> : filtered.length===0 ?
+            <div style={{color:'#9CA3AF',fontSize:13,textAlign:'center',padding:24}}>No reports found.</div> :
+            filtered.map(r => (
+              <div key={r.key} onClick={()=>onView(r.memberId,r.date)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 14px',borderRadius:8,border:'1px solid #E2E8F0',marginBottom:7,cursor:'pointer'}}
+                onMouseEnter={e=>e.currentTarget.style.background='#F7F8FC'} onMouseLeave={e=>e.currentTarget.style.background='white'}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:700,color:N}}>{r.memberName} <span style={{fontSize:11,color:'#9CA3AF',fontWeight:400}}>({r.memberId})</span></div>
+                  <div style={{fontSize:10,color:'#9CA3AF',marginTop:2}}>{new Date(r.date+'T12:00').toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'})}</div>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:10}}><Badge status={r.status}/><span style={{color:'#CBD5E1',fontSize:18}}>›</span></div>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── MAIN APP ─────────────────────────────────────
+function App() {
+  const [user,setUser] = useState(null);
+  const [uid,setUid] = useState('');
+  const [view,setView] = useState('login');
+  const [ctx,setCtx] = useState(null);
+
+  const login = (id,u) => { setUser(u); setUid(id); setView(u.role==='abdm'?'dash':'mgr'); };
+  const logout = () => { setUser(null); setUid(''); setView('login'); setCtx(null); };
+
+  const openView = async (mid,date) => {
+    const r = await loadRpt(mid,date);
+    setCtx({uid:mid,date,report:r});
+    setView('preview');
+  };
+  const openForm = async (date) => {
+    const ex = await loadRpt(uid,date);
+    setCtx({report: ex||{...mkF(),date}});
+    setView('form');
+  };
+
+  if (view==='login') return <Login onLogin={login}/>;
+  if (view==='form' && ctx) return <FormView userId={uid} user={user} init={ctx.report} onBack={()=>setView('dash')} onSubmit={()=>setView('dash')}/>;
+  if (view==='preview' && ctx) return <Preview report={ctx.report} userId={uid} user={user} canAddRemark={user?.role!=='abdm'} onBack={()=>setView(user?.role==='abdm'?'dash':'mgr')}/>;
+  if (view==='dash') return <Dashboard user={user} uid={uid} onLogout={logout} onNew={openForm} onView={openView}/>;
+  if (view==='mgr') return <Manager user={user} uid={uid} onLogout={logout} onView={openView}/>;
+  return null;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
