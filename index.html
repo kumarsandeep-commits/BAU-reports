@@ -52,25 +52,25 @@ const LOGO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAD20AAAJVCAYAAABHto95
 
 // ── TEAM CONFIG ─────────────────────────────────
 const USERS = {
-  "ABDM011": {
+  "ABDM01": {
     name: "Tarun",
     role: "abdm",
-    password: "tarun@1231"
+    password: "tarun@123"
   },
-  "ABDM021": {
+  "ABDM02": {
     name: "Anoop Jha",
     role: "abdm",
-    password: "anoop@1241"
+    password: "anoop@123"
   },
-  "BDM100": {
+  "BDM01": {
     name: "Gautam Grover",
     role: "bdm",
-    password: "bdm@1000"
+    password: "bdm@123"
   },
-  "GM407": {
+  "GM01": {
     name: "Sandeep Kumar",
     role: "gm",
-    password: "gm*1324"
+    password: "gm@123"
   }
 };
 const MEMBER_IDS = Object.keys(USERS).filter(k => USERS[k].role === "abdm");
@@ -526,6 +526,16 @@ const Btn = ({
       bg: "transparent",
       c: "#6B7280",
       b: "1.5px solid #E2E8F0"
+    },
+    pink: {
+      bg: P,
+      c: "white",
+      b: `2px solid ${P}`
+    },
+    danger: {
+      bg: "white",
+      c: "#EF4444",
+      b: "1.5px solid #FCA5A5"
     }
   };
   const x = s[v];
