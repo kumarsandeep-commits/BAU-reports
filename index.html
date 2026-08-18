@@ -39,7 +39,16 @@ var db=firebase.firestore(); // var = globally accessible across script blocks
 </script>
 
 <script>
-// Pre-compiled app (no browser Babel needed — loads instantly)
+// Pre-compiled app — mobile responsive
+// Mobile detection — m() = true when mobile view is active
+var _mob = window.innerWidth < 768;
+var m = function() { return _mob; };
+var toggleMob = function() {
+  _mob = !_mob;
+  window.dispatchEvent(new CustomEvent("mob-toggle"));
+};
+
+ (no browser Babel needed — loads instantly)
 const {
   useState,
   useEffect
@@ -52,25 +61,25 @@ const LOGO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAD20AAAJVCAYAAABHto95
 
 // ── TEAM CONFIG ─────────────────────────────────
 const USERS = {
-  "ABDM011": {
+  "ABDM01": {
     name: "Tarun",
     role: "abdm",
-    password: "tarun@1231"
+    password: "tarun@123"
   },
-  "ABDM021": {
+  "ABDM02": {
     name: "Anoop Jha",
     role: "abdm",
-    password: "anoop@1241"
+    password: "anoop@123"
   },
-  "BDM100": {
+  "BDM01": {
     name: "Gautam Grover",
     role: "bdm",
-    password: "bdm@1000"
+    password: "bdm@123"
   },
-  "GM407": {
+  "GM01": {
     name: "Sandeep Kumar",
     role: "gm",
-    password: "gm*1324"
+    password: "gm@123"
   }
 };
 const MEMBER_IDS = Object.keys(USERS).filter(k => USERS[k].role === "abdm");
@@ -657,6 +666,20 @@ const Nav = ({
     color: "rgba(255,255,255,.4)"
   }
 }, user.role.toUpperCase())), /*#__PURE__*/React.createElement("button", {
+    onClick: toggleMob,
+    title: m() ? "Switch to Desktop" : "Switch to Mobile",
+    style: {
+      padding: "5px 10px",
+      background: "rgba(255,255,255,.15)",
+      color: "white",
+      border: "1px solid rgba(255,255,255,.3)",
+      borderRadius: 6,
+      fontSize: 11,
+      fontWeight: 700,
+      cursor: "pointer",
+      marginRight: 6
+    }
+  }, m() ? "[ Desktop ]" : "[ Mobile ]"), React.createElement("button", {
   onClick: onLogout,
   style: {
     padding: "5px 11px",
@@ -1005,7 +1028,7 @@ function PlanForm({
     style: {
       maxWidth: 940,
       margin: "0 auto",
-      padding: "20px 16px"
+      padding: m() ? "12px 10px" : "20px 16px"
     }
   }, /*#__PURE__*/React.createElement(Card, {
     code: "A",
@@ -1056,7 +1079,7 @@ function PlanForm({
   }, "✕")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement(SmartSel, {
@@ -1074,7 +1097,7 @@ function PlanForm({
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr 1fr",
+      gridTemplateColumns: m() ? "1fr" : "1fr 1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement(Inp, {
@@ -1256,7 +1279,7 @@ function EodForm({
     style: {
       maxWidth: 940,
       margin: "0 auto",
-      padding: "20px 16px"
+      padding: m() ? "12px 10px" : "20px 16px"
     }
   }, step === 1 && /*#__PURE__*/React.createElement(Card, {
     code: "A",
@@ -1318,7 +1341,7 @@ function EodForm({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
       gap: 8
     }
   }, TOOLS.map(t => /*#__PURE__*/React.createElement("div", {
@@ -1395,7 +1418,7 @@ function EodForm({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement(Inp, {
@@ -1446,7 +1469,7 @@ function EodForm({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "repeat(5,1fr)",
+      gridTemplateColumns: m() ? "1fr 1fr" : "repeat(5,1fr)",
       gap: 9
     }
   }, stages.map(st => /*#__PURE__*/React.createElement("div", {
@@ -1651,7 +1674,7 @@ function BdmMorningForm({
     style: {
       maxWidth: 940,
       margin: "0 auto",
-      padding: "20px 16px"
+      padding: m() ? "12px 10px" : "20px 16px"
     }
   }, step === 1 && /*#__PURE__*/React.createElement(Card, {
     code: "BM1",
@@ -1661,7 +1684,7 @@ function BdmMorningForm({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -1702,7 +1725,7 @@ function BdmMorningForm({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement(Inp, {
@@ -1954,7 +1977,7 @@ function BdmEodForm({
     style: {
       maxWidth: 940,
       margin: "0 auto",
-      padding: "20px 16px"
+      padding: m() ? "12px 10px" : "20px 16px"
     }
   }, step === 1 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1975,7 +1998,7 @@ function BdmEodForm({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -2013,7 +2036,7 @@ function BdmEodForm({
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -2044,7 +2067,7 @@ function BdmEodForm({
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -2213,12 +2236,12 @@ function BdmDashboard({
     style: {
       maxWidth: 960,
       margin: "0 auto",
-      padding: "22px 16px"
+      padding: m() ? "12px 10px" : "22px 16px"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
       gap: 14,
       marginBottom: 18
     }
@@ -2551,12 +2574,12 @@ function GMDashboard({
     style: {
       maxWidth: 1000,
       margin: "0 auto",
-      padding: "22px 16px"
+      padding: m() ? "12px 10px" : "22px 16px"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "repeat(4,1fr)",
+      gridTemplateColumns: m() ? "1fr 1fr" : "repeat(4,1fr)",
       gap: 12,
       marginBottom: 18
     }
@@ -2936,7 +2959,7 @@ function ViewAbdmPlan({
     style: {
       maxWidth: 900,
       margin: "0 auto",
-      padding: "20px 16px"
+      padding: m() ? "12px 10px" : "20px 16px"
     }
   }, /*#__PURE__*/React.createElement(Card, {
     code: "A",
@@ -3064,7 +3087,7 @@ function ViewAbdmEod({
     style: {
       maxWidth: 900,
       margin: "0 auto",
-      padding: "20px 16px"
+      padding: m() ? "12px 10px" : "20px 16px"
     }
   }, plan && /*#__PURE__*/React.createElement(Card, {
     code: "A",
@@ -3108,7 +3131,7 @@ function ViewAbdmEod({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
       gap: 7
     }
   }, TOOLS.map(t => {
@@ -3153,7 +3176,7 @@ function ViewAbdmEod({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "repeat(4,1fr)",
+      gridTemplateColumns: m() ? "1fr 1fr" : "repeat(4,1fr)",
       gap: 9
     }
   }, [{
@@ -3208,7 +3231,7 @@ function ViewAbdmEod({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "repeat(5,1fr)",
+      gridTemplateColumns: m() ? "1fr 1fr" : "repeat(5,1fr)",
       gap: 9
     }
   }, stages.map(st => /*#__PURE__*/React.createElement("div", {
@@ -3412,7 +3435,7 @@ function ViewBdmMorning({
     style: {
       maxWidth: 900,
       margin: "0 auto",
-      padding: "20px 16px"
+      padding: m() ? "12px 10px" : "20px 16px"
     }
   }, /*#__PURE__*/React.createElement(Card, {
     code: "BM1",
@@ -3421,7 +3444,7 @@ function ViewBdmMorning({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -3594,7 +3617,7 @@ function ViewBdmEod({
     style: {
       maxWidth: 900,
       margin: "0 auto",
-      padding: "20px 16px"
+      padding: m() ? "12px 10px" : "20px 16px"
     }
   }, (data.abdmEodReviews || []).map((er, i) => /*#__PURE__*/React.createElement(Card, {
     key: er.memberId,
@@ -3604,7 +3627,7 @@ function ViewBdmEod({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "repeat(3,1fr)",
+      gridTemplateColumns: m() ? "1fr 1fr" : "repeat(3,1fr)",
       gap: 10,
       marginBottom: 12
     }
@@ -3765,12 +3788,12 @@ function AbdmDashboard({
     style: {
       maxWidth: 800,
       margin: "0 auto",
-      padding: "22px 16px"
+      padding: m() ? "12px 10px" : "22px 16px"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
       gap: 14,
       marginBottom: 18
     }
@@ -3949,6 +3972,13 @@ function App() {
     setUser(null);
     setUid("");
     setView("login");
+  var _appTick = React.useState(0);
+  var _setTick = _appTick[1];
+  React.useEffect(function() {
+    var h = function() { _setTick(function(t) { return t + 1; }); };
+    window.addEventListener("mob-toggle", h);
+    return function() { window.removeEventListener("mob-toggle", h); };
+  }, []);
     setCtx(null);
   };
   const goBack = () => setView(user?.role === "abdm" ? "abdm" : user?.role === "bdm" ? "bdm" : "gm");
