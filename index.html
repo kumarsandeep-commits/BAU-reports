@@ -39,7 +39,6 @@ var db=firebase.firestore(); // var = globally accessible across script blocks
 </script>
 
 <script>
-// Pre-compiled app — mobile responsive
 // Mobile detection — m() = true when mobile view is active
 var _mob = window.innerWidth < 768;
 var m = function() { return _mob; };
@@ -48,7 +47,7 @@ var toggleMob = function() {
   window.dispatchEvent(new CustomEvent("mob-toggle"));
 };
 
- (no browser Babel needed — loads instantly)
+
 const {
   useState,
   useEffect
