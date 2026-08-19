@@ -67,7 +67,7 @@ function buildPrintBody(plan, eod, bdmM, bdmE) {
     b += '</div></div></div>';
     // C: Sales metrics
     b += '<div class="sec"><div class="sh">C - DAILY SALES & BD TRACKING  Target Rs.21,000</div><div class="sb"><div class="g4">';
-    [{l:'Trainings',v:eod.trainings},{l:'Total Leads',v:eod.totalLeads},{l:'Enq+Bkg Leads',v:eod.enqLeads},{l:'Lead Quality %',v:eod.leadQuality},{l:'P90 Today/Active',v:eod.p90today},{l:'P90 Value',v:eod.p90value},{l:'Enroll Forms',v:eod.enrollForms},{l:'MTD Revenue',v:eod.mtdRevenue}].forEach(function(m){
+    [{l:'Trainings',v:eod.trainings},{l:'Total Leads',v:eod.totalLeads},{l:'Enq+Bkg Leads',v:eod.enqLeads},{l:'Lead Quality %',v:eod.leadQuality},{l:'P90 Today/Active',v:eod.p90today},{l:'P90 Value',v:eod.p90value},{l:'Enroll Forms',v:eod.enrollForms},{l:'MTD Revenue',v:eod.mtdRevenue},{l:'AI Scans',v:eod.aiScanCount},{l:'xCharge Coupons',v:eod.xchargeCoupon},{l:'Customer Envelopes',v:eod.customerEnvelope}].forEach(function(m){
       b += '<div class="mc"><div class="ml">'+m.l+'</div><div class="mv">'+V(m.v)+'</div></div>';
     });
     b += '</div></div></div>';
@@ -224,6 +224,10 @@ const TOOLS = [{
   id: "dti",
   name: "Dealership Team Incentive",
   hint: "Update incentive disbursement if applicable"
+}, {
+  id: "gai",
+  name: "Ground AI Scanner Check",
+  hint: "Daily AI scanner usage verification for ground sales"
 }];
 const RATINGS = ["", "Excellent", "Good", "Needs Improvement", "Poor"];
 const MAX_VISITS = 10;
@@ -263,6 +267,9 @@ const mkEod = () => ({
   insight: "",
   escalation: "",
   bdmRemark: "",
+  aiScanCount: "",
+  xchargeCoupon: "",
+  customerEnvelope: "",
   eodStatus: "draft"
 });
 const mkAbdmReview = () => MEMBER_IDS.map(mid => ({
@@ -1550,7 +1557,25 @@ function EodForm({
     value: eod.mtdRevenue,
     onChange: v => upd("mtdRevenue", v),
     hint: "Running total · ₹21,000/day"
-  }))), step === 4 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Card, {
+  })),
+  /*#__PURE__*/React.createElement(Inp, {
+    label: "Number of AI Scans",
+    value: eod.aiScanCount,
+    onChange: function(v){return upd("aiScanCount",v);},
+    hint: "AI scans done today · Target >50%"
+  }),
+  /*#__PURE__*/React.createElement(Inp, {
+    label: "Exchange xCharge Coupons Given",
+    value: eod.xchargeCoupon,
+    onChange: function(v){return upd("xchargeCoupon",v);},
+    hint: "Number of xCharge exchange coupons distributed"
+  }),
+  /*#__PURE__*/React.createElement(Inp, {
+    label: "Customer Envelopes Given",
+    value: eod.customerEnvelope,
+    onChange: function(v){return upd("customerEnvelope",v);},
+    hint: "Number of customer envelopes distributed"
+  })), step === 4 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Card, {
     code: "D",
     title: "Lead Handover — Inside Sales",
     sub: "P50/DNP/NI/CMB/P90>15d",
@@ -3296,6 +3321,15 @@ function ViewAbdmEod({
   }, {
     l: "MTD Revenue",
     v: eod.mtdRevenue
+  }, {
+    l: "AI Scans",
+    v: eod.aiScanCount
+  }, {
+    l: "xCharge Coupons",
+    v: eod.xchargeCoupon
+  }, {
+    l: "Customer Envelopes",
+    v: eod.customerEnvelope
   }].map(m => /*#__PURE__*/React.createElement("div", {
     key: m.l,
     style: {
@@ -4343,7 +4377,10 @@ function GMConsolidated(_ref) {
             metricCard("Trainings",eo.trainings),metricCard("Total Leads",eo.totalLeads),
             metricCard("Lead Quality %",eo.leadQuality),metricCard("P90 Today/Active",eo.p90today),
             metricCard("MTD Revenue",eo.mtdRevenue),metricCard("P90 Value",eo.p90value),
-            metricCard("Handover Total",eo.handTotal),metricCard("Tool Score",Object.values(eo.tools||{}).filter(Boolean).length+"/7")
+            metricCard("Handover Total",eo.handTotal),metricCard("Tool Score",Object.values(eo.tools||{}).filter(Boolean).length+"/7"),
+          metricCard("AI Scans",eo.aiScanCount),
+          metricCard("xCharge Coupons",eo.xchargeCoupon),
+          metricCard("Customer Envelopes",eo.customerEnvelope)
           ),
           eo.insight&&React.createElement("div",{style:{marginBottom:6}},
             React.createElement("div",{style:{fontSize:9,fontWeight:700,color:"#6B7280",marginBottom:3,textTransform:"uppercase"}},"Insight"),
