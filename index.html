@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Hopcharge · Daily Field Report</title>
+  <title>Hopcharge - Daily Field Report</title>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -20,687 +20,10 @@
 <div id="root">
   <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px">
     <div style="width:36px;height:36px;border:3px solid #E2E8F0;border-top-color:#222E53;border-radius:50%;animation:spin 1s linear infinite"></div>
-    <span style="font-size:13px;color:#9CA3AF">Loading...</span>
+    <span style="font-size:13px;color:#9CA3AF">Loading Hopcharge Field Reports...</span>
   </div>
 </div>
-
-
-
 <script>
-// ═══════════════════════════════════════════════════════
-// PRINT REPORT FUNCTION
-// ═══════════════════════════════════════════════════════
-function buildPrintHTML(plan, eod, bdmM, bdmE, title) {
-  const V = x => x || '—';
-  const rv = (val, other) => val === 'Other' && other ? other : val;
-  const TOOL_NAMES = {
-    gst: 'Ground Sales Input Tool',
-    lsu: 'Lead Status Update',
-    tt: 'Training Tool',
-    cps: 'Customer Profiling Survey Tool',
-    sbd: 'Sales cum BD Engagement Tool',
-    dft: 'Delivery Forecast Tool',
-    dti: 'Dealership Team Incentive'
-  };
-  const css = `
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:Arial,sans-serif;font-size:10px;color:#1a1a2e;background:white;padding:10mm}
-    h1{font-size:13px;font-weight:900;margin-bottom:6px}
-    .sub{font-size:10px;color:#555;margin-bottom:10px;border-bottom:1.5px solid #1a1a2e;padding-bottom:6px}
-    .sec{margin-bottom:10px;border:1px solid #555;border-radius:3px;overflow:hidden}
-    .sh{background:#1a1a2e;color:white;padding:5px 10px;font-size:9.5px;font-weight:800}
-    .sb{padding:9px}
-    table{width:100%;border-collapse:collapse;font-size:9px}
-    th,td{border:1px solid #999;padding:4px 5px;text-align:left;vertical-align:top}
-    th{background:#ebebeb;font-weight:800}
-    .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
-    .g5{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
-    .g2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-    .mc{border:1px solid #555;padding:7px;border-radius:2px}
-    .ml{font-size:8px;font-weight:800;margin-bottom:4px;color:#555}
-    .mv{font-size:15px;font-weight:900;border-top:1px solid #ccc;padding-top:3px;margin-top:2px}
-    .tg{display:grid;grid-template-columns:1fr 1fr;gap:5px}
-    .ti{border:1px solid #ccc;padding:5px 8px;display:flex;justify-content:space-between;align-items:center}
-    .yna{font-weight:800;font-size:12px;padding:2px 8px;border:1px solid #555;border-radius:3px}
-    .wl{border:1px solid #ccc;padding:6px;min-height:28px;font-size:10px;border-radius:2px;margin-bottom:8px}
-    .rating{font-weight:800;font-size:12px;padding:2px 10px;border-radius:10px;border:1px solid #555;display:inline-block}
-    @media print{body{padding:7mm}@page{margin:8mm size:A4 landscape}}
-  `;
-  let body = `<h1>${title}</h1>`;
-  const memberName = (plan || eod || bdmM || bdmE)?.memberName || (plan || eod || bdmM || bdmE)?.bdmName || '';
-  const date = (plan || eod || bdmM || bdmE)?.date || '';
-  body += `<div class="sub">Name: ${memberName} &nbsp;·&nbsp; Date: ${date} &nbsp;·&nbsp; Generated: ${new Date().toLocaleString('en-IN')}</div>`;
-
-  // Section A – Visit Plan
-  if (plan) {
-    const visits = (plan.visits || []).filter(v => v.dealer);
-    body += `<div class="sec"><div class="sh">A · TODAY'S VISIT PLAN</div><div class="sb">`;
-    body += `<table><thead><tr><th>#</th><th>Dealership</th><th>Time</th><th>Meet With</th><th>Desig.</th><th>Purpose</th><th>Agenda</th></tr></thead><tbody>`;
-    visits.forEach((v, i) => {
-      body += `<tr><td>${i + 1}</td><td>${V(rv(v.dealer, v.dealerOther))}</td><td>${V(v.time)}</td><td>${V(v.meetWith)}</td><td>${V(rv(v.desig, v.desigOther))}</td><td>${V(rv(v.purpose, v.purposeOther))}</td><td>${V(v.agenda)}</td></tr>`;
-    });
-    body += `</tbody></table></div></div>`;
-  }
-
-  // EOD Sections B C D E
-  if (eod) {
-    // B – Tools
-    body += `<div class="sec"><div class="sh">B · TOOL COMPLIANCE &nbsp;Score: ${Object.values(eod.tools || {}).filter(Boolean).length}/7</div><div class="sb"><div class="tg">`;
-    Object.entries(TOOL_NAMES).forEach(([id, name]) => {
-      const v = (eod.tools || {})[id];
-      body += `<div class="ti"><span style="font-size:9px;font-weight:700">${name}</span><span class="yna">${V(v)}</span></div>`;
-    });
-    body += `</div></div></div>`;
-    // C – Sales
-    body += `<div class="sec"><div class="sh">C · DAILY SALES & BD TRACKING &nbsp;|&nbsp; Target ₹21,000 · P90 ≥2/day</div><div class="sb"><div class="g4">`;
-    [{
-      l: 'Trainings',
-      v: eod.trainings
-    }, {
-      l: 'Total Leads',
-      v: eod.totalLeads
-    }, {
-      l: 'Enq+Bkg Leads',
-      v: eod.enqLeads
-    }, {
-      l: 'Lead Quality %',
-      v: eod.leadQuality
-    }, {
-      l: 'P90 Today/Active',
-      v: eod.p90today
-    }, {
-      l: 'P90 Value',
-      v: eod.p90value
-    }, {
-      l: 'Enroll Forms',
-      v: eod.enrollForms
-    }, {
-      l: 'MTD Revenue (₹)',
-      v: eod.mtdRevenue
-    }].forEach(m => {
-      body += `<div class="mc"><div class="ml">${m.l}</div><div class="mv">${V(m.v)}</div></div>`;
-    });
-    body += `</div></div></div>`;
-    // D – Handover
-    body += `<div class="sec"><div class="sh">D · LEAD HANDOVER — P50 / DNP / NI / CMB / P90 >15 Days</div><div class="sb"><div class="g5">`;
-    [{
-      l: 'P50',
-      s: 'Warm',
-      v: eod.p50
-    }, {
-      l: 'DNP',
-      s: 'Did Not Pick',
-      v: eod.dnp
-    }, {
-      l: 'Not Interested',
-      s: 'Declined',
-      v: eod.ni
-    }, {
-      l: 'P90 >15d',
-      s: 'Long Cycle',
-      v: eod.p90long
-    }, {
-      l: 'TOTAL',
-      s: 'Handed Over',
-      v: eod.handTotal
-    }].forEach(st => {
-      body += `<div class="mc" style="text-align:center"><div class="ml">${st.l}</div><div style="font-size:8px;color:#888;margin-bottom:4px">(${st.s})</div><div class="mv">${V(st.v)}</div></div>`;
-    });
-    body += `</div></div></div>`;
-    // E – Insight
-    body += `<div class="sec"><div class="sh">E · INSIGHT / OBSERVATION / ESCALATION</div><div class="sb">`;
-    body += `<div style="font-size:8.5px;font-weight:800;margin-bottom:3px">INSIGHT OF THE DAY:</div><div class="wl">${V(eod.insight)}</div>`;
-    body += `<div style="font-size:8.5px;font-weight:800;margin-bottom:3px">ESCALATION / BLOCKER:</div><div class="wl">${V(eod.escalation)}</div>`;
-    body += `<div style="font-size:8.5px;font-weight:800;margin-bottom:3px">BDM REMARK:</div><div class="wl">${V(eod.bdmRemark)}</div>`;
-    body += `</div></div>`;
-    // Visit status update (if plan provided)
-    if (plan && (plan.visits || []).some(v => v.dealer)) {
-      body += `<div class="sec"><div class="sh">A · VISIT STATUS UPDATE</div><div class="sb">`;
-      (plan.visits || []).filter(v => v.dealer).forEach((v, i) => {
-        const st = (eod.visitStatus || [])[i];
-        body += `<div style="display:flex;justify-content:space-between;padding:5px 8px;border:1px solid #eee;border-radius:3px;margin-bottom:4px">`;
-        body += `<div><div style="font-size:9.5px;font-weight:700">${V(rv(v.dealer, v.dealerOther))}</div><div style="font-size:8px;color:#888">${V(rv(v.purpose, v.purposeOther))} · ${V(v.time)}</div></div>`;
-        body += `<span style="font-weight:800;font-size:11px;border:1px solid #555;padding:1px 8px;border-radius:10px">${V(st)}</span></div>`;
-      });
-      body += `</div></div>`;
-    }
-  }
-
-  // BDM Morning Report
-  if (bdmM) {
-    body += `<div class="sec"><div class="sh">BM1 · MORNING MEETING</div><div class="sb">`;
-    body += `<div class="g2"><div><div class="ml">Meeting Held</div><span class="yna">${V(bdmM.meetingHeld)}</span></div><div><div class="ml">Time</div><div>${V(bdmM.meetingTime)}</div></div></div>`;
-    if (bdmM.meetingRemarks) body += `<div style="margin-top:6px"><div class="ml">REMARKS / KEY POINTS</div><div class="wl">${bdmM.meetingRemarks}</div></div>`;
-    body += `</div></div>`;
-    if (bdmM.tataCallsListened || bdmM.tataPitchFeedback) {
-      body += `<div class="sec"><div class="sh">BM2 · TATA TELE PITCH REVIEW</div><div class="sb">`;
-      body += `<div class="ml">Calls Listened: ${V(bdmM.tataCallsListened)}</div>`;
-      if (bdmM.tataPitchFeedback) body += `<div class="wl" style="margin-top:5px">${bdmM.tataPitchFeedback}</div>`;
-      body += `</div></div>`;
-    }
-    (bdmM.abdmPlanReviews || []).forEach((ar, i) => {
-      body += `<div class="sec"><div class="sh">PLAN REVIEW · ${ar.memberName}</div><div class="sb">`;
-      body += `<div class="ml">Plan Reviewed: <span class="yna">${V(ar.reviewed)}</span></div>`;
-      if (ar.ctaAssigned) body += `<div style="margin-top:6px"><div class="ml">CTA ASSIGNED</div><div class="wl">${ar.ctaAssigned}</div></div>`;
-      if (ar.remarks) body += `<div><div class="ml">REMARKS</div><div class="wl">${ar.remarks}</div></div>`;
-      if (ar.flags) body += `<div><div class="ml">FLAGS</div><div class="wl">${ar.flags}</div></div>`;
-      body += `</div></div>`;
-    });
-  }
-
-  // BDM EOD Review
-  if (bdmE) {
-    (bdmE.abdmEodReviews || []).forEach((er, i) => {
-      body += `<div class="sec"><div class="sh">EOD REVIEW · ${er.memberName}</div><div class="sb">`;
-      body += `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">`;
-      body += `<div><div class="ml">Reviewed</div><span class="yna">${V(er.reviewed)}</span></div>`;
-      body += `<div><div class="ml">Completeness</div><span style="font-weight:700;font-size:10px">${V(er.completeness)}</span></div>`;
-      body += `<div><div class="ml">Overall Rating</div><span class="rating">${V(er.overallRating)}</span></div></div>`;
-      if (er.funnelRemarks) body += `<div><div class="ml">FUNNEL / P90 REMARKS</div><div class="wl">${er.funnelRemarks}</div></div>`;
-      if (er.feedbackToAbdm) body += `<div><div class="ml">FEEDBACK TO ABDM</div><div class="wl">${er.feedbackToAbdm}</div></div>`;
-      if (er.escalationToGM) body += `<div><div class="ml" style="color:red">ESCALATION TO GM</div><div class="wl">${er.escalationToGM}</div></div>`;
-      body += `</div></div>`;
-    });
-    if (bdmE.objectionsHandled || bdmE.p90PipelineNotes) {
-      body += `<div class="sec"><div class="sh">BDM DAY SUMMARY</div><div class="sb">`;
-      if (bdmE.objectionsHandled) body += `<div><div class="ml">OBJECTIONS HANDLED</div><div class="wl">${bdmE.objectionsHandled}</div></div>`;
-      if (bdmE.p90PipelineNotes) body += `<div><div class="ml">P90 PIPELINE NOTES</div><div class="wl">${bdmE.p90PipelineNotes}</div></div>`;
-      body += `</div></div>`;
-    }
-    if (bdmE.escalationToGM) {
-      body += `<div class="sec"><div class="sh" style="background:#c0392b">ESCALATION TO GM</div><div class="sb"><div class="wl">${bdmE.escalationToGM}</div></div></div>`;
-    }
-    if (bdmE.tomorrowFocus || bdmE.tomorrowCTAs) {
-      body += `<div class="sec"><div class="sh">TOMORROW'S PLAN</div><div class="sb">`;
-      if (bdmE.tomorrowFocus) body += `<div><div class="ml">FOCUS AREAS</div><div class="wl">${bdmE.tomorrowFocus}</div></div>`;
-      if (bdmE.tomorrowCTAs) body += `<div><div class="ml">CTAs FOR TEAM</div><div class="wl">${bdmE.tomorrowCTAs}</div></div>`;
-      body += `</div></div>`;
-    }
-  }
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${title}</title><style>${css}</style></head><body>${body}</body></html>`;
-}
-function printReport(plan, eod, bdmM, bdmE, title) {
-  const t = title || 'Field Report — ' + ((plan || eod || bdmM || bdmE)?.memberName || '') + ' — ' + ((plan || eod || bdmM || bdmE)?.date || '');
-  const w = window.open('', '_blank');
-  w.document.write(buildPrintHTML(plan, eod, bdmM, bdmE, t));
-  w.document.close();
-  setTimeout(() => w.print(), 400);
-}
-
-// ═══════════════════════════════════════════════════════
-// GM CONSOLIDATED VIEW
-// ═══════════════════════════════════════════════════════
-function GMConsolidated({
-  user,
-  uid,
-  ctx,
-  onBack,
-  onLogout
-}) {
-  if (!ctx) return React.createElement("div", {
-    style: {
-      padding: 40,
-      textAlign: "center",
-      color: "#9CA3AF"
-    }
-  }, "No data.");
-  const {
-    date,
-    plans,
-    eods,
-    bdmMorning,
-    bdmEod
-  } = ctx;
-  const allPlans = plans || [];
-  const allEods = eods || [];
-  const printAll = () => {
-    const w = window.open('', '_blank');
-    let fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Consolidated Report — ${date}</title>`;
-    fullHtml += buildPrintHTML(null, null, null, null, '').match(/<style>([\s\S]*?)<\/style>/)?.[0] || '<style></style>';
-    fullHtml += `</head><body><h1 style="font-size:16px;font-weight:900;margin-bottom:4px">CONSOLIDATED REPORT — ${date}</h1>`;
-    fullHtml += `<div style="font-size:10px;color:#555;margin-bottom:14px;border-bottom:2px solid #1a1a2e;padding-bottom:6px">Generated: ${new Date().toLocaleString('en-IN')}</div>`;
-    MEMBER_IDS.forEach(mid => {
-      const pl = allPlans.find(p => p.memberId === mid);
-      const eo = allEods.find(e => e.memberId === mid);
-      fullHtml += `<div style="margin-bottom:20px"><h2 style="font-size:13px;font-weight:900;color:#222E53;margin-bottom:8px;padding:5px 10px;background:#eef;border-left:4px solid #222E53">${USERS[mid]?.name} (${mid})</h2>`;
-      fullHtml += buildPrintHTML(pl, eo, null, null, '').replace(/^<!DOCTYPE[\s\S]*?<body>/, '').replace(/<\/body>[\s\S]*$/, '');
-      fullHtml += `</div>`;
-    });
-    if (bdmMorning || bdmEod) {
-      const bdmName = (bdmMorning || bdmEod)?.bdmName || 'BDM';
-      fullHtml += `<div style="margin-bottom:20px"><h2 style="font-size:13px;font-weight:900;color:#F59E0B;margin-bottom:8px;padding:5px 10px;background:#fef9ee;border-left:4px solid #F59E0B">${bdmName} — BDM Reviews</h2>`;
-      fullHtml += buildPrintHTML(null, null, bdmMorning, bdmEod, '').replace(/^<!DOCTYPE[\s\S]*?<body>/, '').replace(/<\/body>[\s\S]*$/, '');
-      fullHtml += `</div>`;
-    }
-    fullHtml += `</body></html>`;
-    w.document.write(fullHtml);
-    w.document.close();
-    setTimeout(() => w.print(), 500);
-  };
-  const s = {
-    padding: "12px 14px",
-    border: "1px solid #E2E8F0",
-    borderRadius: 8,
-    marginBottom: 8,
-    background: "white"
-  };
-  const lbl = (text, color) => React.createElement("div", {
-    style: {
-      fontSize: 10,
-      fontWeight: 700,
-      color: color || "#6B7280",
-      marginBottom: 3,
-      textTransform: "uppercase"
-    }
-  }, text);
-  const box = val => React.createElement("div", {
-    style: {
-      padding: "8px 11px",
-      background: "#F7F8FC",
-      borderRadius: 6,
-      fontSize: 13,
-      color: "#1C2333",
-      lineHeight: 1.5,
-      marginBottom: 10
-    }
-  }, val || "—");
-  return React.createElement("div", {
-    style: {
-      minHeight: "100vh",
-      background: "#F0F4F8"
-    }
-  }, React.createElement(Nav, {
-    user,
-    uid,
-    onLogout,
-    title: "Consolidated Report"
-  }), React.createElement("div", {
-    style: {
-      background: "white",
-      borderBottom: "1px solid #E2E8F0",
-      padding: "9px 22px",
-      display: "flex",
-      gap: 10,
-      alignItems: "center"
-    }
-  }, React.createElement(Btn, {
-    v: "ghost",
-    sm: true,
-    onClick: onBack
-  }, "← Back"), React.createElement("div", {
-    style: {
-      fontSize: 14,
-      fontWeight: 700,
-      color: N,
-      flex: 1
-    }
-  }, "Consolidated Report — ", React.createElement("span", {
-    style: {
-      color: T
-    }
-  }, date)), React.createElement(Btn, {
-    v: "teal",
-    sm: true,
-    onClick: printAll
-  }, "🖨 Print All")), React.createElement("div", {
-    style: {
-      maxWidth: 1000,
-      margin: "0 auto",
-      padding: "20px 16px"
-    }
-  },
-  // Each ABDM
-  ...MEMBER_IDS.map(mid => {
-    const pl = allPlans.find(p => p.memberId === mid);
-    const eo = allEods.find(e => e.memberId === mid);
-    return React.createElement("div", {
-      key: mid,
-      style: {
-        marginBottom: 24
-      }
-    }, React.createElement("div", {
-      style: {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        marginBottom: 10
-      }
-    }, React.createElement("div", {
-      style: {
-        fontSize: 16,
-        fontWeight: 800,
-        color: N
-      }
-    }, USERS[mid]?.name, " ", React.createElement("span", {
-      style: {
-        fontSize: 12,
-        color: "#9CA3AF",
-        fontWeight: 400
-      }
-    }, "(", mid, ")")), React.createElement("div", {
-      style: {
-        display: "flex",
-        gap: 8
-      }
-    }, React.createElement(Stat, {
-      s: pl?.planStatus
-    }), React.createElement(Stat, {
-      s: eo?.eodStatus
-    }), React.createElement(Btn, {
-      v: "primary",
-      sm: true,
-      onClick: () => printReport(pl, eo, null, null, `Report — ${USERS[mid]?.name} — ${date}`)
-    }, "🖨 Print"))), pl ? React.createElement(Card, {
-      code: "A",
-      title: "Visit Plan",
-      color: N
-    }, React.createElement("div", {
-      style: {
-        overflowX: "auto"
-      }
-    }, React.createElement("table", {
-      style: {
-        width: "100%",
-        borderCollapse: "collapse",
-        fontSize: 11
-      }
-    }, React.createElement("thead", null, React.createElement("tr", {
-      style: {
-        background: "#F0F4F8"
-      }
-    }, ...["#", "Dealership", "Time", "Meet With", "Desig.", "Purpose", "Agenda", "Status"].map(h => React.createElement("th", {
-      key: h,
-      style: {
-        padding: "6px 8px",
-        textAlign: "left",
-        fontWeight: 800,
-        color: N,
-        fontSize: 9,
-        border: "1px solid #E2E8F0"
-      }
-    }, h)))), React.createElement("tbody", null, ...(pl.visits || []).filter(v => v.dealer).map((v, i) => {
-      const vStatus = eo ? (eo.visitStatus || [])[i] : '';
-      return React.createElement("tr", {
-        key: i,
-        style: {
-          background: i % 2 ? "#FAFBFC" : "white"
-        }
-      }, React.createElement("td", {
-        style: {
-          padding: "6px 8px",
-          border: "1px solid #E2E8F0",
-          fontWeight: 700,
-          color: "#9CA3AF"
-        }
-      }, i + 1), ...[v.dealer === "Other" && v.dealerOther ? v.dealerOther : v.dealer, v.time, v.meetWith, v.desig === "Other" && v.desigOther ? v.desigOther : v.desig, v.purpose === "Other" && v.purposeOther ? v.purposeOther : v.purpose, v.agenda, vStatus || "—"].map((c, j) => React.createElement("td", {
-        key: j,
-        style: {
-          padding: "6px 8px",
-          border: "1px solid #E2E8F0",
-          fontSize: 11,
-          color: c ? "#1C2333" : "#CBD5E1"
-        }
-      }, c || "—")));
-    }))))) : React.createElement("div", {
-      style: {
-        padding: "10px 14px",
-        background: "#F7F8FC",
-        borderRadius: 8,
-        color: "#9CA3AF",
-        fontSize: 13,
-        marginBottom: 10
-      }
-    }, "Plan not submitted"), eo ? React.createElement(Card, {
-      code: "EOD",
-      title: "EOD Report",
-      color: T
-    }, React.createElement("div", {
-      style: {
-        display: "grid",
-        gridTemplateColumns: "repeat(4,1fr)",
-        gap: 8,
-        marginBottom: 12
-      }
-    }, ...[{
-      l: "Trainings",
-      v: eo.trainings
-    }, {
-      l: "Total Leads",
-      v: eo.totalLeads
-    }, {
-      l: "Lead Quality %",
-      v: eo.leadQuality
-    }, {
-      l: "P90 Today/Active",
-      v: eo.p90today
-    }, {
-      l: "P90 Value",
-      v: eo.p90value
-    }, {
-      l: "MTD Revenue",
-      v: eo.mtdRevenue
-    }, {
-      l: "Handover Total",
-      v: eo.handTotal
-    }, {
-      l: "Tool Score",
-      v: Object.values(eo.tools || {}).filter(Boolean).length + "/7"
-    }].map(m => React.createElement("div", {
-      key: m.l,
-      style: {
-        padding: 10,
-        border: "1px solid #E2E8F0",
-        borderRadius: 7,
-        background: "#F7FFFE"
-      }
-    }, React.createElement("div", {
-      style: {
-        fontSize: 9,
-        fontWeight: 700,
-        color: "#6B7280",
-        marginBottom: 4
-      }
-    }, m.l), React.createElement("div", {
-      style: {
-        fontSize: 18,
-        fontWeight: 900,
-        color: N
-      }
-    }, m.v || "—")))), eo.insight && React.createElement("div", {
-      style: {
-        marginBottom: 8
-      }
-    }, lbl("Insight"), box(eo.insight)), eo.escalation && React.createElement("div", {
-      style: {
-        marginBottom: 8
-      }
-    }, lbl("Escalation", P), React.createElement("div", {
-      style: {
-        padding: "8px 11px",
-        background: "#FFF5F5",
-        border: "1px solid #FEE2E2",
-        borderRadius: 6,
-        fontSize: 13,
-        color: "#1C2333"
-      }
-    }, eo.escalation)), eo.bdmRemark && React.createElement("div", null, lbl("BDM Remark"), box(eo.bdmRemark))) : React.createElement("div", {
-      style: {
-        padding: "10px 14px",
-        background: "#F7F8FC",
-        borderRadius: 8,
-        color: "#9CA3AF",
-        fontSize: 13,
-        marginBottom: 10
-      }
-    }, "EOD not submitted"));
-  }),
-  // BDM Section
-  bdmMorning || bdmEod ? React.createElement("div", {
-    style: {
-      marginBottom: 24
-    }
-  }, React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 10
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: 16,
-      fontWeight: 800,
-      color: AM
-    }
-  }, (bdmMorning || bdmEod)?.bdmName, " — BDM"), React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 8
-    }
-  }, bdmMorning && React.createElement(Stat, {
-    s: bdmMorning.morningStatus
-  }), bdmEod && React.createElement(Stat, {
-    s: bdmEod.eodStatus
-  }), React.createElement(Btn, {
-    v: "amber",
-    sm: true,
-    onClick: () => printReport(null, null, bdmMorning, bdmEod, "BDM Report — " + date)
-  }, "🖨 Print"))), bdmMorning ? React.createElement(Card, {
-    code: "Morning",
-    title: "Morning Review",
-    color: AM
-  }, React.createElement("div", {
-    style: {
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr",
-      gap: 8,
-      marginBottom: 10
-    }
-  }, React.createElement("div", null, lbl("Meeting Held"), React.createElement("span", {
-    style: {
-      fontWeight: 800,
-      fontSize: 14,
-      color: bdmMorning.meetingHeld === "YES" ? T : P
-    }
-  }, bdmMorning.meetingHeld || "—")), React.createElement("div", null, lbl("Meeting Time"), React.createElement("div", {
-    style: {
-      fontSize: 13,
-      fontWeight: 600
-    }
-  }, bdmMorning.meetingTime || "—"))), bdmMorning.meetingRemarks && React.createElement("div", {
-    style: {
-      marginBottom: 8
-    }
-  }, lbl("Meeting Remarks"), box(bdmMorning.meetingRemarks)), ...(bdmMorning.abdmPlanReviews || []).map((ar, i) => React.createElement("div", {
-    key: i,
-    style: {
-      padding: "10px 12px",
-      border: "1px solid #E2E8F0",
-      borderRadius: 7,
-      marginBottom: 8,
-      background: "#F7F8FC"
-    }
-  }, React.createElement("div", {
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      marginBottom: 6
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: 12,
-      fontWeight: 700,
-      color: N
-    }
-  }, ar.memberName), React.createElement("span", {
-    style: {
-      fontWeight: 800,
-      fontSize: 12,
-      color: ar.reviewed === "YES" ? T : P
-    }
-  }, ar.reviewed || "—")), ar.ctaAssigned && React.createElement("div", null, lbl("CTA"), box(ar.ctaAssigned)), ar.flags && React.createElement("div", null, lbl("Flags"), box(ar.flags))))) : null, bdmEod ? React.createElement(Card, {
-    code: "EOD Review",
-    title: "EOD Review",
-    color: P
-  }, ...(bdmEod.abdmEodReviews || []).map((er, i) => React.createElement("div", {
-    key: i,
-    style: {
-      padding: "10px 12px",
-      border: "1px solid #E2E8F0",
-      borderRadius: 7,
-      marginBottom: 8,
-      background: er.escalationToGM ? "#FFF5F5" : "#F7F8FC"
-    }
-  }, React.createElement("div", {
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 6
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: 12,
-      fontWeight: 700,
-      color: N
-    }
-  }, er.memberName), React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 6,
-      alignItems: "center"
-    }
-  }, er.overallRating && React.createElement("span", {
-    style: {
-      fontWeight: 700,
-      fontSize: 11,
-      padding: "2px 8px",
-      borderRadius: 10,
-      background: er.overallRating === "Excellent" ? "#D1FAE5" : er.overallRating === "Good" ? "#E0FFF4" : er.overallRating === "Needs Improvement" ? "#FEF3C7" : "#FEE2E2",
-      color: "#1C2333"
-    }
-  }, er.overallRating), React.createElement("span", {
-    style: {
-      fontWeight: 800,
-      fontSize: 12,
-      color: er.reviewed === "YES" ? T : P
-    }
-  }, er.reviewed || "—"))), er.feedbackToAbdm && React.createElement("div", {
-    style: {
-      marginBottom: 4
-    }
-  }, lbl("Feedback"), box(er.feedbackToAbdm)), er.escalationToGM && React.createElement("div", null, lbl("Escalation to GM", P), React.createElement("div", {
-    style: {
-      padding: "7px 10px",
-      background: "#FEE2E2",
-      borderRadius: 5,
-      fontSize: 12,
-      fontWeight: 600
-    }
-  }, er.escalationToGM)))), bdmEod.escalationToGM && React.createElement("div", {
-    style: {
-      padding: "10px 14px",
-      background: "#FEE2E2",
-      borderRadius: 8,
-      border: "1px solid #FCA5A5",
-      marginTop: 8
-    }
-  }, lbl("BDM ESCALATION TO GM", P), React.createElement("div", {
-    style: {
-      fontSize: 13,
-      fontWeight: 600,
-      color: "#1C2333",
-      marginTop: 4
-    }
-  }, bdmEod.escalationToGM)), (bdmEod.tomorrowFocus || bdmEod.tomorrowCTAs) && React.createElement("div", {
-    style: {
-      marginTop: 10
-    }
-  }, lbl("Tomorrow's Plan"), bdmEod.tomorrowFocus && box(bdmEod.tomorrowFocus), bdmEod.tomorrowCTAs && box(bdmEod.tomorrowCTAs))) : null) : null));
-}
-
-
-// Firebase
 firebase.initializeApp({
   apiKey:"AIzaSyBDJZHtfZ14BWENG-lVi-xD5iBY0FCcCQQ",
   authDomain:"hopcharge-field-reports.firebaseapp.com",
@@ -709,16 +32,140 @@ firebase.initializeApp({
   messagingSenderId:"118591151417",
   appId:"1:118591151417:web:a61eb0461380a7a7305ce8"
 });
-var db=firebase.firestore(); // var = globally accessible across script blocks
+var db=firebase.firestore();
+</script>
+<script>
 
+/* ── PRINT FUNCTIONS ──────────────────────────────────── */
+function buildPrintCSS() {
+  return '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:10px;color:#1a1a2e;padding:10mm}h1{font-size:13px;font-weight:900;margin-bottom:4px}.sub{font-size:10px;color:#555;border-bottom:1.5px solid #1a1a2e;padding-bottom:6px;margin-bottom:10px}.sec{margin-bottom:10px;border:1px solid #555;border-radius:3px;overflow:hidden}.sh{background:#1a1a2e;color:white;padding:5px 10px;font-size:9.5px;font-weight:800}.sb{padding:9px}table{width:100%;border-collapse:collapse;font-size:9px}th,td{border:1px solid #999;padding:4px 5px;text-align:left;vertical-align:top}th{background:#ebebeb;font-weight:800}.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.g2{display:grid;grid-template-columns:1fr 1fr;gap:7px}.mc{border:1px solid #555;padding:7px;border-radius:2px}.ml{font-size:8px;font-weight:800;margin-bottom:4px;color:#555}.mv{font-size:15px;font-weight:900;border-top:1px solid #ccc;padding-top:3px;margin-top:2px}.tg{display:grid;grid-template-columns:1fr 1fr;gap:5px}.ti{border:1px solid #ccc;padding:5px 8px;display:flex;justify-content:space-between;align-items:center}.wl{border:1px solid #ccc;padding:6px;min-height:28px;font-size:10px;border-radius:2px;margin-bottom:8px}.pgb{page-break-before:always}@media print{body{padding:7mm}@page{margin:8mm}}</style>';
+}
+function V(x){return x||'--';}
+function rv(val,other){return val==='Other'&&other?other:val;}
+var TOOL_NAMES_PRINT={gst:'Ground Sales Input Tool',lsu:'Lead Status Update',tt:'Training Tool',cps:'Customer Profiling Survey Tool',sbd:'Sales cum BD Engagement Tool',dft:'Delivery Forecast Tool',dti:'Dealership Team Incentive'};
 
-// Mobile detection — m() = true when mobile view is active
-var _mob = window.innerWidth < 768;
-var m = function() { return _mob; };
-var toggleMob = function() {
-  _mob = !_mob;
-  window.dispatchEvent(new CustomEvent("mob-toggle"));
-};
+function buildPrintBody(plan, eod, bdmM, bdmE) {
+  var b = '';
+  // A: Visit Plan
+  if (plan) {
+    var visits = (plan.visits||[]).filter(function(v){return v.dealer;});
+    b += '<div class="sec"><div class="sh">A - TODAY\'S VISIT PLAN</div><div class="sb"><table><thead><tr><th>#</th><th>Dealership</th><th>Time</th><th>Meet With</th><th>Desig.</th><th>Purpose</th><th>Agenda</th><th>Status (EOD)</th></tr></thead><tbody>';
+    visits.forEach(function(v,i){
+      var st = eod ? (eod.visitStatus||[])[i]||'--' : '--';
+      b += '<tr><td>'+(i+1)+'</td><td>'+V(rv(v.dealer,v.dealerOther))+'</td><td>'+V(v.time)+'</td><td>'+V(v.meetWith)+'</td><td>'+V(rv(v.desig,v.desigOther))+'</td><td>'+V(rv(v.purpose,v.purposeOther))+'</td><td>'+V(v.agenda)+'</td><td>'+st+'</td></tr>';
+    });
+    b += '</tbody></table></div></div>';
+  }
+  // B: Tool compliance
+  if (eod) {
+    var toolScore = Object.values(eod.tools||{}).filter(Boolean).length;
+    b += '<div class="sec"><div class="sh">B - TOOL COMPLIANCE  Score: '+toolScore+'/7</div><div class="sb"><div class="tg">';
+    Object.keys(TOOL_NAMES_PRINT).forEach(function(id){
+      var tv = (eod.tools||{})[id]||'--';
+      b += '<div class="ti"><span style="font-size:9px;font-weight:700">'+TOOL_NAMES_PRINT[id]+'</span><span style="font-weight:800;font-size:12px;border:1px solid #555;padding:1px 7px">'+tv+'</span></div>';
+    });
+    b += '</div></div></div>';
+    // C: Sales metrics
+    b += '<div class="sec"><div class="sh">C - DAILY SALES & BD TRACKING  Target Rs.21,000</div><div class="sb"><div class="g4">';
+    [{l:'Trainings',v:eod.trainings},{l:'Total Leads',v:eod.totalLeads},{l:'Enq+Bkg Leads',v:eod.enqLeads},{l:'Lead Quality %',v:eod.leadQuality},{l:'P90 Today/Active',v:eod.p90today},{l:'P90 Value',v:eod.p90value},{l:'Enroll Forms',v:eod.enrollForms},{l:'MTD Revenue',v:eod.mtdRevenue}].forEach(function(m){
+      b += '<div class="mc"><div class="ml">'+m.l+'</div><div class="mv">'+V(m.v)+'</div></div>';
+    });
+    b += '</div></div></div>';
+    // D: Handover
+    b += '<div class="sec"><div class="sh">D - LEAD HANDOVER  P50 / DNP / NI / CMB / P90 >15 Days</div><div class="sb"><div class="g5">';
+    [{l:'P50',s:'Warm',v:eod.p50},{l:'DNP',s:'Did Not Pick',v:eod.dnp},{l:'NI',s:'Declined',v:eod.ni},{l:'P90>15d',s:'Long Cycle',v:eod.p90long},{l:'TOTAL',s:'Handed Over',v:eod.handTotal}].forEach(function(st){
+      b += '<div class="mc" style="text-align:center"><div class="ml">'+st.l+'</div><div style="font-size:8px;color:#888;margin-bottom:4px">('+st.s+')</div><div class="mv">'+V(st.v)+'</div></div>';
+    });
+    b += '</div></div></div>';
+    // E: Insight
+    b += '<div class="sec"><div class="sh">E - INSIGHT / OBSERVATION / ESCALATION</div><div class="sb">';
+    b += '<div style="font-size:8.5px;font-weight:800;margin-bottom:3px">INSIGHT:</div><div class="wl">'+V(eod.insight)+'</div>';
+    b += '<div style="font-size:8.5px;font-weight:800;margin-bottom:3px">ESCALATION / BLOCKER:</div><div class="wl">'+V(eod.escalation)+'</div>';
+    b += '<div style="font-size:8.5px;font-weight:800;margin-bottom:3px">BDM REMARK:</div><div class="wl">'+V(eod.bdmRemark)+'</div>';
+    b += '</div></div>';
+  }
+  // BDM Morning
+  if (bdmM) {
+    b += '<div class="sec"><div class="sh">BM1 - MORNING MEETING</div><div class="sb">';
+    b += '<div class="g2" style="margin-bottom:8px"><div><div class="ml">MEETING HELD</div><span style="font-weight:800;font-size:13px">'+V(bdmM.meetingHeld)+'</span></div><div><div class="ml">TIME</div><div>'+V(bdmM.meetingTime)+'</div></div></div>';
+    if(bdmM.meetingRemarks) b += '<div class="ml">KEY POINTS:</div><div class="wl">'+bdmM.meetingRemarks+'</div>';
+    b += '</div></div>';
+    if(bdmM.tataCallsListened||bdmM.tataPitchFeedback){
+      b += '<div class="sec"><div class="sh">BM2 - TATA TELE PITCH REVIEW</div><div class="sb">';
+      b += '<div class="ml">CALLS LISTENED: '+V(bdmM.tataCallsListened)+'</div>';
+      if(bdmM.tataPitchFeedback) b += '<div class="wl" style="margin-top:5px">'+bdmM.tataPitchFeedback+'</div>';
+      b += '</div></div>';
+    }
+    (bdmM.abdmPlanReviews||[]).forEach(function(ar){
+      b += '<div class="sec"><div class="sh">PLAN REVIEW - '+ar.memberName+'</div><div class="sb">';
+      b += '<div class="ml">REVIEWED: '+V(ar.reviewed)+'</div>';
+      if(ar.ctaAssigned) b += '<div class="ml" style="margin-top:6px">CTA ASSIGNED:</div><div class="wl">'+ar.ctaAssigned+'</div>';
+      if(ar.flags) b += '<div class="ml">FLAGS/CONCERNS:</div><div class="wl">'+ar.flags+'</div>';
+      b += '</div></div>';
+    });
+  }
+  // BDM EOD Review
+  if (bdmE) {
+    (bdmE.abdmEodReviews||[]).forEach(function(er){
+      b += '<div class="sec"><div class="sh">EOD REVIEW - '+er.memberName+'</div><div class="sb">';
+      b += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">';
+      b += '<div><div class="ml">REVIEWED</div><span style="font-weight:800">'+V(er.reviewed)+'</span></div>';
+      b += '<div><div class="ml">COMPLETENESS</div><span>'+V(er.completeness)+'</span></div>';
+      b += '<div><div class="ml">OVERALL RATING</div><span style="font-weight:800">'+V(er.overallRating)+'</span></div></div>';
+      if(er.funnelRemarks) b += '<div class="ml">FUNNEL/P90:</div><div class="wl">'+er.funnelRemarks+'</div>';
+      if(er.feedbackToAbdm) b += '<div class="ml">FEEDBACK TO ABDM:</div><div class="wl">'+er.feedbackToAbdm+'</div>';
+      if(er.escalationToGM) b += '<div class="ml" style="color:red">ESCALATION TO GM:</div><div class="wl">'+er.escalationToGM+'</div>';
+      b += '</div></div>';
+    });
+    if(bdmE.escalationToGM){
+      b += '<div class="sec"><div class="sh" style="background:#c0392b">BDM ESCALATION TO GM</div><div class="sb"><div class="wl">'+bdmE.escalationToGM+'</div></div></div>';
+    }
+    if(bdmE.tomorrowFocus||bdmE.tomorrowCTAs){
+      b += '<div class="sec"><div class="sh">TOMORROW\'S PLAN</div><div class="sb">';
+      if(bdmE.tomorrowFocus) b += '<div class="ml">FOCUS AREAS:</div><div class="wl">'+bdmE.tomorrowFocus+'</div>';
+      if(bdmE.tomorrowCTAs) b += '<div class="ml">CTAs FOR TEAM:</div><div class="wl">'+bdmE.tomorrowCTAs+'</div>';
+      b += '</div></div>';
+    }
+  }
+  return b;
+}
+
+function printReport(plan, eod, bdmM, bdmE, title) {
+  var rec = plan||eod||bdmM||bdmE||{};
+  var t = title||('Field Report - '+(rec.memberName||rec.bdmName||'')+' - '+(rec.date||''));
+  var w = window.open('','_blank');
+  var body = '<h1>'+t+'</h1>';
+  body += '<div class="sub">Generated: '+new Date().toLocaleString('en-IN')+'</div>';
+  body += buildPrintBody(plan,eod,bdmM,bdmE);
+  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"/><title>'+t+'</title>'+buildPrintCSS()+'</head><body>'+body+'</body></html>');
+  w.document.close();
+  setTimeout(function(){w.print();},400);
+}
+
+function printConsolidated(date, allPlans, allEods, bdmMorning, bdmEod, memberIds, users) {
+  var w = window.open('','_blank');
+  var title = 'Consolidated Report - '+date;
+  var body = '<h1>'+title+'</h1>';
+  body += '<div class="sub">Generated: '+new Date().toLocaleString('en-IN')+'</div>';
+  memberIds.forEach(function(mid){
+    var pl = allPlans.find(function(p){return p.memberId===mid;});
+    var eo = allEods.find(function(e){return e.memberId===mid;});
+    body += '<div class="pgb" style="margin-bottom:20px"><h2 style="font-size:12px;font-weight:900;padding:5px 10px;background:#eef;border-left:4px solid #222E53;margin-bottom:8px">'+(users[mid]&&users[mid].name||mid)+' ('+mid+')</h2>';
+    if(pl||eo) body += buildPrintBody(pl,eo,null,null);
+    else body += '<div style="color:#999;font-size:10px;padding:8px">No reports submitted for this date.</div>';
+    body += '</div>';
+  });
+  if(bdmMorning||bdmEod){
+    var bdmName = (bdmMorning||bdmEod).bdmName||'BDM';
+    body += '<div class="pgb" style="margin-bottom:20px"><h2 style="font-size:12px;font-weight:900;padding:5px 10px;background:#fef9ee;border-left:4px solid #F59E0B;margin-bottom:8px">'+bdmName+' - BDM Reviews</h2>';
+    body += buildPrintBody(null,null,bdmMorning,bdmEod);
+    body += '</div>';
+  }
+  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"/><title>'+title+'</title>'+buildPrintCSS()+'</head><body>'+body+'</body></html>');
+  w.document.close();
+  setTimeout(function(){w.print();},500);
+}
+/* ── END PRINT FUNCTIONS ──────────────────────────────── */
 
 
 const {
@@ -733,26 +180,10 @@ const LOGO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAD20AAAJVCAYAAABHto95
 
 // ── TEAM CONFIG ─────────────────────────────────
 const USERS = {
-  "ABDM011": {
-    name: "Tarun",
-    role: "abdm",
-    password: "tarun@1231"
-  },
-  "ABDM021": {
-    name: "Anoop Jha",
-    role: "abdm",
-    password: "anoop@1241"
-  },
-  "BDM100": {
-    name: "Gautam Grover",
-    role: "bdm",
-    password: "bdm@1000"
-  },
-  "GM407": {
-    name: "Sandeep Kumar",
-    role: "gm",
-    password: "gm*1324"
-  }
+  "ABDM011": {name:"Tarun",        role:"abdm", password:"tarun@1231"},
+  "ABDM021": {name:"Anoop Jha",    role:"abdm", password:"anoop@1241"},
+  "BDM100":  {name:"Gautam Grover",role:"bdm",  password:"bdm@1000"},
+  "GM407":   {name:"Sandeep Kumar",role:"gm",   password:"gm*1324"}
 };
 const MEMBER_IDS = Object.keys(USERS).filter(k => USERS[k].role === "abdm");
 const BDM_IDS = Object.keys(USERS).filter(k => USERS[k].role === "bdm");
@@ -1338,20 +769,6 @@ const Nav = ({
     color: "rgba(255,255,255,.4)"
   }
 }, user.role.toUpperCase())), /*#__PURE__*/React.createElement("button", {
-    onClick: toggleMob,
-    title: m() ? "Switch to Desktop" : "Switch to Mobile",
-    style: {
-      padding: "5px 10px",
-      background: "rgba(255,255,255,.15)",
-      color: "white",
-      border: "1px solid rgba(255,255,255,.3)",
-      borderRadius: 6,
-      fontSize: 11,
-      fontWeight: 700,
-      cursor: "pointer",
-      marginRight: 6
-    }
-  }, m() ? "[ Desktop ]" : "[ Mobile ]"), React.createElement("button", {
   onClick: onLogout,
   style: {
     padding: "5px 11px",
@@ -1700,7 +1117,7 @@ function PlanForm({
     style: {
       maxWidth: 940,
       margin: "0 auto",
-      padding: m() ? "12px 10px" : "20px 16px"
+      padding: "20px 16px"
     }
   }, /*#__PURE__*/React.createElement(Card, {
     code: "A",
@@ -1751,7 +1168,7 @@ function PlanForm({
   }, "✕")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
+      gridTemplateColumns: "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement(SmartSel, {
@@ -1769,7 +1186,7 @@ function PlanForm({
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: m() ? "1fr" : "1fr 1fr 1fr",
+      gridTemplateColumns: "1fr 1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement(Inp, {
@@ -1951,7 +1368,7 @@ function EodForm({
     style: {
       maxWidth: 940,
       margin: "0 auto",
-      padding: m() ? "12px 10px" : "20px 16px"
+      padding: "20px 16px"
     }
   }, step === 1 && /*#__PURE__*/React.createElement(Card, {
     code: "A",
@@ -2013,7 +1430,7 @@ function EodForm({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
+      gridTemplateColumns: "1fr 1fr",
       gap: 8
     }
   }, TOOLS.map(t => /*#__PURE__*/React.createElement("div", {
@@ -2090,7 +1507,7 @@ function EodForm({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
+      gridTemplateColumns: "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement(Inp, {
@@ -2141,7 +1558,7 @@ function EodForm({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: m() ? "1fr 1fr" : "repeat(5,1fr)",
+      gridTemplateColumns: "repeat(5,1fr)",
       gap: 9
     }
   }, stages.map(st => /*#__PURE__*/React.createElement("div", {
@@ -2346,7 +1763,7 @@ function BdmMorningForm({
     style: {
       maxWidth: 940,
       margin: "0 auto",
-      padding: m() ? "12px 10px" : "20px 16px"
+      padding: "20px 16px"
     }
   }, step === 1 && /*#__PURE__*/React.createElement(Card, {
     code: "BM1",
@@ -2356,7 +1773,7 @@ function BdmMorningForm({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
+      gridTemplateColumns: "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -2397,7 +1814,7 @@ function BdmMorningForm({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
+      gridTemplateColumns: "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement(Inp, {
@@ -2649,7 +2066,7 @@ function BdmEodForm({
     style: {
       maxWidth: 940,
       margin: "0 auto",
-      padding: m() ? "12px 10px" : "20px 16px"
+      padding: "20px 16px"
     }
   }, step === 1 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -2670,7 +2087,7 @@ function BdmEodForm({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
+      gridTemplateColumns: "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -2708,7 +2125,7 @@ function BdmEodForm({
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
+      gridTemplateColumns: "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -2739,7 +2156,7 @@ function BdmEodForm({
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
+      gridTemplateColumns: "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -2908,12 +2325,12 @@ function BdmDashboard({
     style: {
       maxWidth: 960,
       margin: "0 auto",
-      padding: m() ? "12px 10px" : "22px 16px"
+      padding: "22px 16px"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
+      gridTemplateColumns: "1fr 1fr",
       gap: 14,
       marginBottom: 18
     }
@@ -3203,8 +2620,7 @@ function GMDashboard({
   onViewAbdmPlan,
   onViewAbdmEod,
   onViewBdmMorning,
-  onViewBdmEod
-,
+  onViewBdmEod,
   onViewConsolidated
 }) {
   const [plans, setPlans] = useState([]);
@@ -3248,12 +2664,12 @@ function GMDashboard({
     style: {
       maxWidth: 1000,
       margin: "0 auto",
-      padding: m() ? "12px 10px" : "22px 16px"
+      padding: "22px 16px"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: m() ? "1fr 1fr" : "repeat(4,1fr)",
+      gridTemplateColumns: "repeat(4,1fr)",
       gap: 12,
       marginBottom: 18
     }
@@ -3402,11 +2818,12 @@ function GMDashboard({
     })), /*#__PURE__*/React.createElement("div", {
       style: {display:"flex",alignItems:"center",gap:8}
     },
-    /*#__PURE__*/React.createElement("button", {
-      onClick: function(){ onViewConsolidated(date); },
-      style: {padding:"4px 12px",background:"#222E53",color:"white",border:"none",borderRadius:5,fontSize:11,cursor:"pointer",fontWeight:700}
-    }, "View Full Report"),
-    /*#__PURE__*/React.createElement("span", {style:{fontSize:11,color:"#9CA3AF"}}, date))), /*#__PURE__*/React.createElement("div", {
+      /*#__PURE__*/React.createElement("button", {
+        onClick: function(){ onViewConsolidated(date); },
+        style: {padding:"4px 12px",background:N,color:"white",border:"none",borderRadius:5,fontSize:11,cursor:"pointer",fontWeight:700}
+      }, "View Full Report"),
+      /*#__PURE__*/React.createElement("span", {style:{fontSize:11,color:"#9CA3AF"}}, date)
+    )), /*#__PURE__*/React.createElement("div", {
       style: {
         padding: "12px 14px"
       }
@@ -3631,11 +3048,11 @@ function ViewAbdmPlan({
     }
   }, plan.memberName, " — ", plan.date, " — Today's Plan"), /*#__PURE__*/React.createElement(Stat, {
     s: plan.planStatus
-  })), /*#__PURE__*/React.createElement(Btn, {v:"teal",sm:true,onClick:function(){printReport(plan,null,null,null,"Print / PDF");}}, " Print / PDF"), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement("button", {"onClick": function(){printReport(plan,null,null,null,"Visit Plan Report");},"style": {padding:"6px 14px",background:T,color:"white",border:"none",borderRadius:6,fontSize:12,cursor:"pointer",fontWeight:700}}, "Print / PDF"), /*#__PURE__*/React.createElement("div", {
     style: {
       maxWidth: 900,
       margin: "0 auto",
-      padding: m() ? "12px 10px" : "20px 16px"
+      padding: "20px 16px"
     }
   }, /*#__PURE__*/React.createElement(Card, {
     code: "A",
@@ -3759,11 +3176,11 @@ function ViewAbdmEod({
     }
   }, eod.memberName, " — ", eod.date, " — EOD Report"), /*#__PURE__*/React.createElement(Stat, {
     s: eod.eodStatus
-  })), /*#__PURE__*/React.createElement(Btn, {v:"teal",sm:true,onClick:function(){printReport(plan,eod,null,null,"Print / PDF");}}, " Print / PDF"), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement("button", {"onClick": function(){printReport(plan,eod,null,null,"EOD Report");},"style": {padding:"6px 14px",background:T,color:"white",border:"none",borderRadius:6,fontSize:12,cursor:"pointer",fontWeight:700}}, "Print / PDF"), /*#__PURE__*/React.createElement("div", {
     style: {
       maxWidth: 900,
       margin: "0 auto",
-      padding: m() ? "12px 10px" : "20px 16px"
+      padding: "20px 16px"
     }
   }, plan && /*#__PURE__*/React.createElement(Card, {
     code: "A",
@@ -3807,7 +3224,7 @@ function ViewAbdmEod({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
+      gridTemplateColumns: "1fr 1fr",
       gap: 7
     }
   }, TOOLS.map(t => {
@@ -3852,7 +3269,7 @@ function ViewAbdmEod({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: m() ? "1fr 1fr" : "repeat(4,1fr)",
+      gridTemplateColumns: "repeat(4,1fr)",
       gap: 9
     }
   }, [{
@@ -3907,7 +3324,7 @@ function ViewAbdmEod({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: m() ? "1fr 1fr" : "repeat(5,1fr)",
+      gridTemplateColumns: "repeat(5,1fr)",
       gap: 9
     }
   }, stages.map(st => /*#__PURE__*/React.createElement("div", {
@@ -4107,11 +3524,11 @@ function ViewBdmMorning({
     }
   }, data.bdmName, " — ", data.date, " — Morning Review"), /*#__PURE__*/React.createElement(Stat, {
     s: data.morningStatus
-  })), /*#__PURE__*/React.createElement(Btn, {v:"teal",sm:true,onClick:function(){printReport(null,null,data,null,"Morning Review");}}, " Print / PDF"), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement("button", {"onClick": function(){printReport(null,null,data,null,"BDM Morning Review");},"style": {padding:"6px 14px",background:T,color:"white",border:"none",borderRadius:6,fontSize:12,cursor:"pointer",fontWeight:700}}, "Print / PDF"), /*#__PURE__*/React.createElement("div", {
     style: {
       maxWidth: 900,
       margin: "0 auto",
-      padding: m() ? "12px 10px" : "20px 16px"
+      padding: "20px 16px"
     }
   }, /*#__PURE__*/React.createElement(Card, {
     code: "BM1",
@@ -4120,7 +3537,7 @@ function ViewBdmMorning({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
+      gridTemplateColumns: "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -4289,11 +3706,11 @@ function ViewBdmEod({
     }
   }, data.bdmName, " — ", data.date, " — EOD Review"), /*#__PURE__*/React.createElement(Stat, {
     s: data.eodStatus
-  })), /*#__PURE__*/React.createElement(Btn, {v:"teal",sm:true,onClick:function(){printReport(null,null,null,data,"EOD Review");}}, " Print / PDF"), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement("button", {"onClick": function(){printReport(null,null,null,data,"BDM EOD Review");},"style": {padding:"6px 14px",background:T,color:"white",border:"none",borderRadius:6,fontSize:12,cursor:"pointer",fontWeight:700}}, "Print / PDF"), /*#__PURE__*/React.createElement("div", {
     style: {
       maxWidth: 900,
       margin: "0 auto",
-      padding: m() ? "12px 10px" : "20px 16px"
+      padding: "20px 16px"
     }
   }, (data.abdmEodReviews || []).map((er, i) => /*#__PURE__*/React.createElement(Card, {
     key: er.memberId,
@@ -4303,7 +3720,7 @@ function ViewBdmEod({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: m() ? "1fr 1fr" : "repeat(3,1fr)",
+      gridTemplateColumns: "repeat(3,1fr)",
       gap: 10,
       marginBottom: 12
     }
@@ -4464,12 +3881,12 @@ function AbdmDashboard({
     style: {
       maxWidth: 800,
       margin: "0 auto",
-      padding: m() ? "12px 10px" : "22px 16px"
+      padding: "22px 16px"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: m() ? "1fr" : "1fr 1fr",
+      gridTemplateColumns: "1fr 1fr",
       gap: 14,
       marginBottom: 18
     }
@@ -4648,13 +4065,6 @@ function App() {
     setUser(null);
     setUid("");
     setView("login");
-  var _appTick = React.useState(0);
-  var _setTick = _appTick[1];
-  React.useEffect(function() {
-    var h = function() { _setTick(function(t) { return t + 1; }); };
-    window.addEventListener("mob-toggle", h);
-    return function() { window.removeEventListener("mob-toggle", h); };
-  }, []);
     setCtx(null);
   };
   const goBack = () => setView(user?.role === "abdm" ? "abdm" : user?.role === "bdm" ? "bdm" : "gm");
@@ -4741,22 +4151,6 @@ function App() {
       date
     });
     setView("viewBdmEod");
-
-  var openConsolidated = async date => {
-    var results = await Promise.all([
-      listCol("plans"), listCol("eods"),
-      listCol("bdm_morning"), listCol("bdm_eod")
-    ]);
-    var plans = results[0], eods = results[1], bdmMs = results[2], bdmEs = results[3];
-    setCtx({
-      date: date,
-      plans: plans.filter(function(p){return p.date===date;}),
-      eods: eods.filter(function(e){return e.date===date;}),
-      bdmMorning: bdmMs.find(function(b){return b.date===date;}),
-      bdmEod: bdmEs.find(function(b){return b.date===date;})
-    });
-    setView("gm-consolidated");
-  };
   };
   if (!user) return /*#__PURE__*/React.createElement(Login, {
     onLogin: login
@@ -4840,6 +4234,13 @@ function App() {
     onViewAbdmPlan: viewAbdmPlan,
     onViewAbdmEod: viewAbdmEod
   });
+  var openConsolidated = function(date) {
+    Promise.all([listCol("plans"),listCol("eods"),listCol("bdm_morning"),listCol("bdm_eod")]).then(function(results){
+      setCtx({date:date, plans:results[0].filter(function(p){return p.date===date;}), eods:results[1].filter(function(e){return e.date===date;}), bdmMorning:results[2].find(function(b){return b.date===date;})||null, bdmEod:results[3].find(function(b){return b.date===date;})||null});
+      setView("gm-consolidated");
+    });
+  };
+  if (view === "gm-consolidated" && ctx) return /*#__PURE__*/React.createElement(GMConsolidated, {user:user,uid:uid,ctx:ctx,onBack:goBack,onLogout:logout});
   if (view === "gm") return /*#__PURE__*/React.createElement(GMDashboard, {
     user: user,
     uid: uid,
@@ -4850,10 +4251,198 @@ function App() {
     onViewBdmEod: viewBdmEod,
     onViewConsolidated: openConsolidated
   });
-    if (view === "gm-consolidated" && ctx) return /*#__PURE__*/React.createElement(GMConsolidated, {user:user,uid:uid,ctx:ctx,onBack:goBack,onLogout:logout});
   return null;
 }
 ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(App, null));
+
+
+/* ── GM CONSOLIDATED VIEW ─────────────────────────────── */
+function GMConsolidated(_ref) {
+  var user=_ref.user, uid=_ref.uid, ctx=_ref.ctx, onBack=_ref.onBack, onLogout=_ref.onLogout;
+  var React_useState = React.useState([]), plans=React_useState[0], setPlans=React_useState[1];
+  var React_useState2 = React.useState([]), eods=React_useState2[0], setEods=React_useState2[1];
+  var React_useState3 = React.useState(null), bdmM=React_useState3[0], setBdmM=React_useState3[1];
+  var React_useState4 = React.useState(null), bdmE=React_useState4[0], setBdmE=React_useState4[1];
+  var React_useState5 = React.useState(true), loading=React_useState5[0], setLoading=React_useState5[1];
+
+  React.useEffect(function(){
+    if(!ctx){setLoading(false);return;}
+    setPlans(ctx.plans||[]);
+    setEods(ctx.eods||[]);
+    setBdmM(ctx.bdmMorning||null);
+    setBdmE(ctx.bdmEod||null);
+    setLoading(false);
+  }, [ctx]);
+
+  if(!ctx) return React.createElement("div",{style:{padding:40,textAlign:"center",color:"#9CA3AF"}},"No data for this date.");
+  var date = ctx.date||"";
+
+  var metricCard = function(label, value) {
+    return React.createElement("div",{style:{padding:10,border:"1px solid #E2E8F0",borderRadius:7,background:"#F7FFFE"}},
+      React.createElement("div",{style:{fontSize:9,fontWeight:700,color:"#6B7280",marginBottom:4,textTransform:"uppercase"}},label),
+      React.createElement("div",{style:{fontSize:18,fontWeight:900,color:N}},value||"--")
+    );
+  };
+
+  var sectionHdr = function(code, title, color) {
+    return React.createElement("div",{style:{background:color||N,padding:"8px 12px",display:"flex",alignItems:"center",gap:8,borderRadius:"6px 6px 0 0"}},
+      React.createElement("span",{style:{background:"rgba(255,255,255,.2)",color:"white",fontWeight:900,fontSize:10,padding:"1px 7px",borderRadius:3}},code),
+      React.createElement("span",{style:{color:"white",fontWeight:700,fontSize:12}},title)
+    );
+  };
+
+  var wrapSec = function(header, children) {
+    return React.createElement("div",{style:{border:"1px solid #E2E8F0",borderRadius:7,marginBottom:12,overflow:"hidden"}},
+      header,
+      React.createElement("div",{style:{padding:12}},children)
+    );
+  };
+
+  var memberSections = MEMBER_IDS.map(function(mid){
+    var pl = plans.find(function(p){return p.memberId===mid;});
+    var eo = eods.find(function(e){return e.memberId===mid;});
+    var memberName = (USERS[mid]&&USERS[mid].name)||mid;
+    return React.createElement("div",{key:mid,style:{marginBottom:20}},
+      React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,padding:"8px 12px",background:"#F0F4F8",borderRadius:7}},
+        React.createElement("div",{style:{fontSize:15,fontWeight:800,color:N}},memberName," ",React.createElement("span",{style:{fontSize:11,color:"#9CA3AF",fontWeight:400}},"(",mid,")")),
+        React.createElement("div",{style:{display:"flex",gap:8,alignItems:"center"}},
+          React.createElement(Stat,{s:pl&&pl.planStatus}),
+          React.createElement(Stat,{s:eo&&eo.eodStatus}),
+          React.createElement("button",{
+            onClick:function(){printReport(pl,eo,null,null,"Report - "+memberName+" - "+date);},
+            style:{padding:"4px 12px",background:T,color:"white",border:"none",borderRadius:5,fontSize:11,cursor:"pointer",fontWeight:700}
+          },"Print Report")
+        )
+      ),
+      pl ? wrapSec(sectionHdr("A","Visit Plan"),
+        React.createElement("div",{style:{overflowX:"auto"}},
+          React.createElement("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:11}},
+            React.createElement("thead",null,
+              React.createElement("tr",{style:{background:"#F0F4F8"}},
+                ["#","Dealership","Time","Meet With","Desig.","Purpose","Agenda","Status"].map(function(h){
+                  return React.createElement("th",{key:h,style:{padding:"5px 8px",textAlign:"left",fontWeight:800,color:N,fontSize:9,border:"1px solid #E2E8F0"}},h);
+                })
+              )
+            ),
+            React.createElement("tbody",null,
+              (pl.visits||[]).filter(function(v){return v.dealer;}).map(function(v,i){
+                var vStatus = eo?(eo.visitStatus||[])[i]:"";
+                var cells = [v.dealer==="Other"&&v.dealerOther?v.dealerOther:v.dealer, v.time, v.meetWith, v.desig==="Other"&&v.desigOther?v.desigOther:v.desig, v.purpose==="Other"&&v.purposeOther?v.purposeOther:v.purpose, v.agenda, vStatus||"--"];
+                return React.createElement("tr",{key:i,style:{background:i%2?"#FAFBFC":"white"}},
+                  React.createElement("td",{style:{padding:"5px 8px",border:"1px solid #E2E8F0",fontWeight:700,color:"#9CA3AF"}},i+1),
+                  cells.map(function(c,j){return React.createElement("td",{key:j,style:{padding:"5px 8px",border:"1px solid #E2E8F0",fontSize:11,color:c?N:"#CBD5E1"}},c||"--");})
+                );
+              })
+            )
+          )
+        )
+      ) : React.createElement("div",{style:{padding:"8px 12px",background:"#F7F8FC",borderRadius:7,color:"#9CA3AF",fontSize:12,marginBottom:8}},"Plan not submitted"),
+      eo ? wrapSec(sectionHdr("EOD","EOD Report",T),
+        React.createElement("div",null,
+          React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:10}},
+            metricCard("Trainings",eo.trainings),metricCard("Total Leads",eo.totalLeads),
+            metricCard("Lead Quality %",eo.leadQuality),metricCard("P90 Today/Active",eo.p90today),
+            metricCard("MTD Revenue",eo.mtdRevenue),metricCard("P90 Value",eo.p90value),
+            metricCard("Handover Total",eo.handTotal),metricCard("Tool Score",Object.values(eo.tools||{}).filter(Boolean).length+"/7")
+          ),
+          eo.insight&&React.createElement("div",{style:{marginBottom:6}},
+            React.createElement("div",{style:{fontSize:9,fontWeight:700,color:"#6B7280",marginBottom:3,textTransform:"uppercase"}},"Insight"),
+            React.createElement("div",{style:{padding:"7px 10px",background:"#F7F8FC",borderRadius:5,fontSize:12}},(eo.insight))
+          ),
+          eo.escalation&&React.createElement("div",{style:{marginBottom:6}},
+            React.createElement("div",{style:{fontSize:9,fontWeight:700,color:P,marginBottom:3,textTransform:"uppercase"}},"Escalation / Blocker"),
+            React.createElement("div",{style:{padding:"7px 10px",background:"#FFF5F5",border:"1px solid #FEE2E2",borderRadius:5,fontSize:12}},(eo.escalation))
+          ),
+          eo.bdmRemark&&React.createElement("div",null,
+            React.createElement("div",{style:{fontSize:9,fontWeight:700,color:N,marginBottom:3,textTransform:"uppercase"}},"BDM Remark"),
+            React.createElement("div",{style:{padding:"7px 10px",background:"#FFF8E1",border:"1px solid #FDE68A",borderRadius:5,fontSize:12}},(eo.bdmRemark))
+          )
+        )
+      ) : React.createElement("div",{style:{padding:"8px 12px",background:"#F7F8FC",borderRadius:7,color:"#9CA3AF",fontSize:12}},"EOD not submitted")
+    );
+  });
+
+  var bdmSection = (bdmM||bdmE) ? React.createElement("div",{style:{marginBottom:20}},
+    React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,padding:"8px 12px",background:"#FEF9EE",borderRadius:7,border:"1px solid #FDE68A"}},
+      React.createElement("div",{style:{fontSize:15,fontWeight:800,color:AM}},(bdmM||bdmE).bdmName," - BDM"),
+      React.createElement("div",{style:{display:"flex",gap:8,alignItems:"center"}},
+        bdmM&&React.createElement(Stat,{s:bdmM.morningStatus}),
+        bdmE&&React.createElement(Stat,{s:bdmE.eodStatus}),
+        React.createElement("button",{
+          onClick:function(){printReport(null,null,bdmM,bdmE,"BDM Report - "+date);},
+          style:{padding:"4px 12px",background:AM,color:"white",border:"none",borderRadius:5,fontSize:11,cursor:"pointer",fontWeight:700}
+        },"Print BDM Report")
+      )
+    ),
+    bdmM&&wrapSec(sectionHdr("Morning","Morning Review",AM),
+      React.createElement("div",null,
+        React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}},
+          React.createElement("div",null,React.createElement("div",{style:{fontSize:9,fontWeight:700,color:"#6B7280",marginBottom:3}},"MEETING HELD"),React.createElement("span",{style:{fontWeight:800,fontSize:14,color:bdmM.meetingHeld==="YES"?T:P}},bdmM.meetingHeld||"--")),
+          React.createElement("div",null,React.createElement("div",{style:{fontSize:9,fontWeight:700,color:"#6B7280",marginBottom:3}},"TIME"),React.createElement("div",{style:{fontWeight:600,fontSize:13}},bdmM.meetingTime||"--"))
+        ),
+        bdmM.meetingRemarks&&React.createElement("div",{style:{padding:"7px 10px",background:"#F7F8FC",borderRadius:5,fontSize:12,marginBottom:8}},(bdmM.meetingRemarks)),
+        React.createElement("div",{style:{marginTop:8}},
+          (bdmM.abdmPlanReviews||[]).map(function(ar,i){
+            return React.createElement("div",{key:i,style:{padding:"9px 12px",border:"1px solid #E2E8F0",borderRadius:6,marginBottom:6,background:"#FAFBFC"}},
+              React.createElement("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:4}},
+                React.createElement("span",{style:{fontSize:12,fontWeight:700,color:N}},ar.memberName),
+                React.createElement("span",{style:{fontWeight:800,fontSize:12,color:ar.reviewed==="YES"?T:P}},ar.reviewed||"--")
+              ),
+              ar.ctaAssigned&&React.createElement("div",{style:{fontSize:11,color:"#555",marginBottom:4}},"CTA: "+ar.ctaAssigned),
+              ar.flags&&React.createElement("div",{style:{fontSize:11,color:P}},"Flags: "+ar.flags)
+            );
+          })
+        )
+      )
+    ),
+    bdmE&&wrapSec(sectionHdr("EOD Review","EOD Review",P),
+      React.createElement("div",null,
+        (bdmE.abdmEodReviews||[]).map(function(er,i){
+          return React.createElement("div",{key:i,style:{padding:"9px 12px",border:"1px solid "+(er.escalationToGM?"#FCA5A5":"#E2E8F0"),borderRadius:6,marginBottom:6,background:er.escalationToGM?"#FFF5F5":"#FAFBFC"}},
+            React.createElement("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:4}},
+              React.createElement("span",{style:{fontSize:12,fontWeight:700,color:N}},er.memberName),
+              React.createElement("div",{style:{display:"flex",gap:6}},
+                er.overallRating&&React.createElement("span",{style:{fontWeight:700,fontSize:11,padding:"1px 8px",borderRadius:10,background:"#E0FFF4",color:N}},er.overallRating),
+                React.createElement("span",{style:{fontWeight:800,fontSize:12,color:er.reviewed==="YES"?T:P}},er.reviewed||"--")
+              )
+            ),
+            er.feedbackToAbdm&&React.createElement("div",{style:{fontSize:11,color:"#555",marginBottom:4}},(er.feedbackToAbdm)),
+            er.escalationToGM&&React.createElement("div",{style:{fontSize:11,color:P,fontWeight:700}},"ESCALATION: "+er.escalationToGM)
+          );
+        }),
+        bdmE.escalationToGM&&React.createElement("div",{style:{padding:"10px 12px",background:"#FEE2E2",borderRadius:6,border:"1px solid #FCA5A5",marginTop:8}},
+          React.createElement("div",{style:{fontSize:9,fontWeight:700,color:P,marginBottom:4}},"BDM ESCALATION TO GM"),
+          React.createElement("div",{style:{fontSize:13,fontWeight:600,color:N}},(bdmE.escalationToGM))
+        ),
+        (bdmE.tomorrowFocus||bdmE.tomorrowCTAs)&&React.createElement("div",{style:{marginTop:10,padding:"9px 12px",background:"#F7FFFE",borderRadius:6}},
+          React.createElement("div",{style:{fontSize:9,fontWeight:700,color:T,marginBottom:6}},"TOMORROW'S PLAN"),
+          bdmE.tomorrowFocus&&React.createElement("div",{style:{fontSize:12,marginBottom:4}},(bdmE.tomorrowFocus)),
+          bdmE.tomorrowCTAs&&React.createElement("div",{style:{fontSize:12}},(bdmE.tomorrowCTAs))
+        )
+      )
+    )
+  ) : null;
+
+  return React.createElement("div",{style:{minHeight:"100vh",background:"#F0F4F8"}},
+    React.createElement(Nav,{user:user,uid:uid,onLogout:onLogout,title:"Consolidated Report"}),
+    React.createElement("div",{style:{background:"white",borderBottom:"1px solid #E2E8F0",padding:"9px 22px",display:"flex",gap:10,alignItems:"center"}},
+      React.createElement(Btn,{v:"ghost",sm:true,onClick:onBack},"Back"),
+      React.createElement("div",{style:{fontSize:14,fontWeight:700,color:N,flex:1}},"Consolidated Report - "+date),
+      React.createElement("button",{
+        onClick:function(){printConsolidated(date,plans,eods,bdmM,bdmE,MEMBER_IDS,USERS);},
+        style:{padding:"7px 14px",background:T,color:"white",border:"none",borderRadius:7,fontSize:12,cursor:"pointer",fontWeight:700}
+      },"Print All Reports")
+    ),
+    React.createElement("div",{style:{maxWidth:1000,margin:"0 auto",padding:"20px 16px"}},
+      loading ? React.createElement(Spinner,null) :
+        React.createElement("div",null,
+          memberSections,
+          bdmSection
+        )
+    )
+  );
+}
+/* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
 
 
 </script>
