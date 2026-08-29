@@ -9,21 +9,14 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#F0F4F8;min-height:100vh}
-    input,select,textarea,button{font-family:inherit}
-    ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:10px}
-    @keyframes spin{to{transform:rotate(360deg)}}
-  </style>
+  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#F0F4F8;min-height:100vh}input,select,textarea,button{font-family:inherit}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:10px}@keyframes spin{to{transform:rotate(360deg)}}</style>
 </head>
 <body>
-<div id="root">
-  <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px">
-    <div style="width:36px;height:36px;border:3px solid #E2E8F0;border-top-color:#222E53;border-radius:50%;animation:spin 1s linear infinite"></div>
-    <span style="font-size:13px;color:#9CA3AF">Loading Hopcharge Field Reports...</span>
-  </div>
-</div>
+<div id="root"><div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px"><div style="width:36px;height:36px;border:3px solid #E2E8F0;border-top-color:#222E53;border-radius:50%;animation:spin 1s linear infinite"></div><span style="font-size:13px;color:#9CA3AF">Loading Hopcharge Field Reports...</span></div></div>
+<script>
+firebase.initializeApp({apiKey:"AIzaSyBDJZHtfZ14BWENG-lVi-xD5iBY0FCcCQQ",authDomain:"hopcharge-field-reports.firebaseapp.com",projectId:"hopcharge-field-reports",storageBucket:"hopcharge-field-reports.firebasestorage.app",messagingSenderId:"118591151417",appId:"1:118591151417:web:a61eb0461380a7a7305ce8"});
+var db=firebase.firestore();
+</script>
 <script>
 firebase.initializeApp({
   apiKey:"AIzaSyBDJZHtfZ14BWENG-lVi-xD5iBY0FCcCQQ",
@@ -34,20 +27,8 @@ firebase.initializeApp({
   appId:"1:118591151417:web:a61eb0461380a7a7305ce8"
 });
 var db=firebase.firestore();
-</script>
-<script>
 
-firebase.initializeApp({
-  apiKey:"AIzaSyBDJZHtfZ14BWENG-lVi-xD5iBY0FCcCQQ",
-  authDomain:"hopcharge-field-reports.firebaseapp.com",
-  projectId:"hopcharge-field-reports",
-  storageBucket:"hopcharge-field-reports.firebasestorage.app",
-  messagingSenderId:"118591151417",
-  appId:"1:118591151417:web:a61eb0461380a7a7305ce8"
-});
-var db=firebase.firestore();
-</script>
-<script>
+
 
 
 /* ══════════════════════════════════════════════════════════════
@@ -3614,7 +3595,7 @@ function ViewAbdmEod({
       borderRadius: 7,
       fontSize: 13
     }
-  }, eod.bdmRemark)))));
+  }, eod.bdmRemark))));
 }
 function ViewBdmMorning({
   user,
@@ -4609,9 +4590,6 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
-
-
-
 </script>
 </body>
 </html>
