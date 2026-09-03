@@ -18,6 +18,47 @@ firebase.initializeApp({apiKey:"AIzaSyBDJZHtfZ14BWENG-lVi-xD5iBY0FCcCQQ",authDom
 var db=firebase.firestore();
 </script>
 <script>
+
+/* ── GOOGLE SHEETS SYNC ─────────────────────────────────────────── */
+var SHEETS_URL = "https://script.google.com/macros/s/AKfycbzZAmfeYwcwHvbSRDqPH0GY7RQbbOJN2YnYV0VMaqvmG_F4aAUO1FALEoUWuNlB8S6RpA/exec";
+function postToSheet(type, data) {
+  if (!SHEETS_URL || SHEETS_URL.indexOf("YOUR_") >= 0) return;
+  var payload = {
+    type: type,
+    memberName: data.memberName || "",
+    memberId: data.memberId || "",
+    date: data.date || "",
+    visitsCount: (data.visits || []).filter(function(v){return v && v.dealer;}).length,
+    trainings: data.trainings || "",
+    totalLeads: data.totalLeads || "",
+    enqLeads: data.enqLeads || "",
+    leadQuality: data.leadQuality || "",
+    p90today: data.p90today || "",
+    p90value: data.p90value || "",
+    mtdRevenue: data.mtdRevenue || "",
+    aiScanCount: data.aiScanCount || "",
+    xchargeCoupon: data.xchargeCoupon || "",
+    customerEnvelope: data.customerEnvelope || "",
+    p50: data.p50 || "",
+    dnp: data.dnp || "",
+    ni: data.ni || "",
+    p90long: data.p90long || "",
+    handTotal: data.handTotal || "",
+    toolScore: Object.values(data.tools || {}).filter(Boolean).length,
+    insight: data.insight || "",
+    escalation: data.escalation || ""
+  };
+  try {
+    fetch(SHEETS_URL, {
+      method: "POST",
+      headers: {"Content-Type": "text/plain"},
+      body: JSON.stringify(payload)
+    }).catch(function(e){ console.log("Sheet sync error:", e); });
+  } catch(e) { console.log("Sheet sync exception:", e); }
+}
+/* ── END SHEETS ─────────────────────────────────────────────────── */
+
+
 firebase.initializeApp({
   apiKey:"AIzaSyBDJZHtfZ14BWENG-lVi-xD5iBY0FCcCQQ",
   authDomain:"hopcharge-field-reports.firebaseapp.com",
@@ -1396,11 +1437,12 @@ function EodForm({
   const doSave = async (submit = false) => {
     setSaving(true);
     try {
-      await saveEod(userId, user.name, {
+      const _savedEod = await saveEod(userId, user.name, {
         ...eod,
         date: planData?.date || eod.date,
         eodStatus: submit ? "submitted" : "draft"
       });
+      if (submit) postToSheet("eod", _savedEod);
       showT(submit ? "✓ EOD submitted!" : "Draft saved.");
       if (submit) setTimeout(onDone, 800);
     } catch (e) {
@@ -4590,6 +4632,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 </script>
 </body>
 </html>
