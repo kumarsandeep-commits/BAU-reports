@@ -18,6 +18,7 @@ firebase.initializeApp({apiKey:"AIzaSyBDJZHtfZ14BWENG-lVi-xD5iBY0FCcCQQ",authDom
 var db=firebase.firestore();
 </script>
 <script>
+
 firebase.initializeApp({
   apiKey:"AIzaSyBDJZHtfZ14BWENG-lVi-xD5iBY0FCcCQQ",
   authDomain:"hopcharge-field-reports.firebaseapp.com",
@@ -95,6 +96,91 @@ function sendReportEmail(plan, eod, toEmail, onResult) {
   } catch(e) { onResult(false, e.message||"Error"); }
 }
 /* ── END EMAIL ─────────────────────────────────────────────── */
+
+/* ══════════════════════════════════════════════════════════════
+   GOOGLE SHEETS SYNC — Auto-appends every EOD submission to sheet
+   ─────────────────────────────────────────────────────────────
+   SETUP (5 minutes, free):
+   1. Go to sheets.google.com → Create new sheet
+      Name it: "Hopcharge Field Reports"
+   2. Go to Extensions → Apps Script
+   3. Delete all existing code, paste this entire script:
+
+      const COLS = ["Timestamp","Member","ID","Date","Type","Visits",
+        "Trainings","Total Leads","Enq+Bkg","Lead Quality%","P90 Today",
+        "P90 Value","MTD Revenue","AI Scans","xCharge Coupons",
+        "Envelopes","P50","DNP","NI","P90>15d","Handover Total",
+        "Tool Score","Insight","Escalation"];
+      function doPost(e){
+        try{
+          var s=SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+          if(s.getLastRow()===0) s.appendRow(COLS);
+          var d=JSON.parse(e.postData.contents);
+          s.appendRow([new Date().toLocaleString("en-IN"),
+            d.memberName,d.memberId,d.date,d.type,
+            d.visitsCount||0,d.trainings,d.totalLeads,d.enqLeads,
+            d.leadQuality,d.p90today,d.p90value,d.mtdRevenue,
+            d.aiScanCount,d.xchargeCoupon,d.customerEnvelope,
+            d.p50,d.dnp,d.ni,d.p90long,d.handTotal,
+            d.toolScore,d.insight,d.escalation]);
+          return ContentService.createTextOutput(
+            JSON.stringify({ok:true})).setMimeType(
+            ContentService.MimeType.JSON);
+        }catch(err){
+          return ContentService.createTextOutput(
+            JSON.stringify({ok:false,e:err.message})).setMimeType(
+            ContentService.MimeType.JSON);
+        }
+      }
+      function doGet(e){return ContentService.createTextOutput("OK");}
+
+   4. Click Deploy → New deployment
+      Type: Web App
+      Execute as: Me
+      Who has access: Anyone
+   5. Click Deploy → copy the URL
+   6. Replace YOUR_APPS_SCRIPT_URL below with that URL
+   ══════════════════════════════════════════════════════════════ */
+var SHEETS_URL = "YOUR_APPS_SCRIPT_URL";
+
+function postToSheet(type, data) {
+  if (!SHEETS_URL || SHEETS_URL === "YOUR_APPS_SCRIPT_URL") return;
+  var payload = {
+    type: type,
+    memberName: data.memberName || "",
+    memberId: data.memberId || "",
+    date: data.date || "",
+    visitsCount: (data.visits || []).filter(function(v){return v && v.dealer;}).length,
+    trainings: data.trainings || "",
+    totalLeads: data.totalLeads || "",
+    enqLeads: data.enqLeads || "",
+    leadQuality: data.leadQuality || "",
+    p90today: data.p90today || "",
+    p90value: data.p90value || "",
+    mtdRevenue: data.mtdRevenue || "",
+    aiScanCount: data.aiScanCount || "",
+    xchargeCoupon: data.xchargeCoupon || "",
+    customerEnvelope: data.customerEnvelope || "",
+    p50: data.p50 || "",
+    dnp: data.dnp || "",
+    ni: data.ni || "",
+    p90long: data.p90long || "",
+    handTotal: data.handTotal || "",
+    toolScore: Object.values(data.tools || {}).filter(Boolean).length,
+    insight: data.insight || "",
+    escalation: data.escalation || ""
+  };
+  try {
+    fetch(SHEETS_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload)
+    });
+  } catch(e) { console.log("Sheet sync:", e); }
+}
+/* ── END SHEETS ─────────────────────────────────────────────── */
+
 
 /* ── PRINT FUNCTIONS ──────────────────────────────────── */
 
@@ -308,36 +394,50 @@ const VSTATUS = ["", "Done", "Pending", "Cancelled", "Rescheduled"];
 const TOOLS = [{
   id: "gst",
   name: "Ground Sales Input Tool",
-  hint: "Daily lead entries — CRM / ground tool"
+  hint: "Daily lead entries — CRM / ground tool",
+  url: ""
 }, {
   id: "lsu",
   name: "Lead Status Update",
-  hint: "P90 / P50 / NI / DNP status for all leads"
+  hint: "P90 / P50 / NI / DNP status for all leads",
+  url: ""
 }, {
   id: "tt",
   name: "Training Tool",
-  hint: "Log today's training session record"
+  hint: "Log today's training session record",
+  url: ""
 }, {
   id: "cps",
   name: "Customer Profiling Survey Tool",
-  hint: "Profile for newly onboarded customers"
+  hint: "Profile for newly onboarded customers",
+  url: ""
 }, {
   id: "sbd",
   name: "Sales cum BD Engagement Tool",
-  hint: "BD activity + sales engagement log"
+  hint: "BD activity + sales engagement log",
+  url: ""
 }, {
   id: "dft",
   name: "Delivery Forecast Tool",
-  hint: "Update expected delivery forecast"
+  hint: "Update expected delivery forecast",
+  url: ""
 }, {
   id: "dti",
   name: "Dealership Team Incentive",
-  hint: "Update incentive disbursement if applicable"
+  hint: "Update incentive disbursement if applicable",
+  url: ""
 }, {
   id: "gai",
   name: "Ground AI Scanner Check",
-  hint: "Daily AI scanner usage verification for ground sales"
+  hint: "Daily AI scanner usage verification for ground sales",
+  url: ""
 }];
+/*
+  HOW TO ADD TOOL LINKS:
+  Find the TOOLS array above and fill in the "url" field for each tool.
+  Example: url: "https://docs.google.com/forms/d/YOUR_FORM_ID"
+  Save the file and commit to GitHub — links appear instantly.
+*/
 const RATINGS = ["", "Excellent", "Good", "Needs Improvement", "Poor"];
 const MAX_VISITS = 10;
 const mkV = () => ({
@@ -1396,11 +1496,12 @@ function EodForm({
   const doSave = async (submit = false) => {
     setSaving(true);
     try {
-      await saveEod(userId, user.name, {
+      const savedEod = await saveEod(userId, user.name, {
         ...eod,
         date: planData?.date || eod.date,
         eodStatus: submit ? "submitted" : "draft"
       });
+      if (submit) postToSheet("eod", savedEod);
       showT(submit ? "✓ EOD submitted!" : "Draft saved.");
       if (submit) setTimeout(onDone, 800);
     } catch (e) {
@@ -1561,20 +1662,21 @@ function EodForm({
       gap: 10,
       background: eod.tools[t.id] ? "#F7FFFE" : "white"
     }
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 12,
-      fontWeight: 700,
-      color: N
-    }
-  }, t.name), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10,
-      color: "#9CA3AF",
-      fontStyle: "italic",
-      marginTop: 2
-    }
-  }, t.hint)), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", null,
+  /*#__PURE__*/React.createElement("div", {style:{display:"flex",alignItems:"center",gap:6}},
+    /*#__PURE__*/React.createElement("div", {
+      style: {fontSize:12,fontWeight:700,color:N}
+    }, t.name),
+    t.url && /*#__PURE__*/React.createElement("a", {
+      href: t.url, target: "_blank", rel: "noopener noreferrer",
+      onClick: function(e){e.stopPropagation();},
+      style: {fontSize:10,fontWeight:700,padding:"2px 7px",background:T,color:"white",
+              borderRadius:4,textDecoration:"none",flexShrink:0,marginLeft:2}
+    }, "Open Tool")
+  ),
+  /*#__PURE__*/React.createElement("div", {
+    style: {fontSize:10,color:"#9CA3AF",fontStyle:"italic",marginTop:2}
+  }, t.hint))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 5,
@@ -1773,7 +1875,7 @@ function EodForm({
     v: "teal",
     onClick: () => doSave(true),
     disabled: saving
-  }, saving ? "Submitting…" : "Submit EOD ✓")))));
+  }, saving ? "Submitting…" : "Submit EOD ✓"))));
 }
 
 // ═══════════════════════════════════════════════
@@ -3375,19 +3477,21 @@ function ViewAbdmEod({
         alignItems: "center",
         background: v === "YES" ? "#F0FDF9" : v === "NO" ? "#FFF5F5" : "white"
       }
-    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 12,
-        fontWeight: 700,
-        color: N
-      }
-    }, t.name), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 10,
-        color: "#9CA3AF",
-        fontStyle: "italic"
-      }
-    }, t.hint)), /*#__PURE__*/React.createElement("span", {
+    }, /*#__PURE__*/React.createElement("div", null,
+  /*#__PURE__*/React.createElement("div", {style:{display:"flex",alignItems:"center",gap:6}},
+    /*#__PURE__*/React.createElement("div", {
+      style: {fontSize:12,fontWeight:700,color:N}
+    }, t.name),
+    t.url && /*#__PURE__*/React.createElement("a", {
+      href: t.url, target: "_blank", rel: "noopener noreferrer",
+      onClick: function(e){e.stopPropagation();},
+      style: {fontSize:10,fontWeight:700,padding:"2px 7px",background:T,color:"white",
+              borderRadius:4,textDecoration:"none",flexShrink:0,marginLeft:2}
+    }, "Open Tool")
+  ),
+  /*#__PURE__*/React.createElement("div", {
+    style: {fontSize:10,color:"#9CA3AF",fontStyle:"italic",marginTop:2}
+  }, t.hint))), /*#__PURE__*/React.createElement("span", {
       style: {
         fontWeight: 800,
         fontSize: 12,
@@ -4487,7 +4591,7 @@ function GMConsolidated(_ref) {
             metricCard("Trainings",eo.trainings),metricCard("Total Leads",eo.totalLeads),
             metricCard("Lead Quality %",eo.leadQuality),metricCard("P90 Today/Active",eo.p90today),
             metricCard("MTD Revenue",eo.mtdRevenue),metricCard("P90 Value",eo.p90value),
-            metricCard("Handover Total",eo.handTotal),metricCard("Tool Score",Object.values(eo.tools||{}).filter(Boolean).length+"/7"),
+            metricCard("Handover Total",eo.handTotal),metricCard("Tool Score",Object.values(eo.tools||{}).filter(Boolean).length+"/"+TOOLS.length),
           metricCard("AI Scans",eo.aiScanCount),
           metricCard("xCharge Coupons",eo.xchargeCoupon),
           metricCard("Customer Envelopes",eo.customerEnvelope)
@@ -4590,6 +4694,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 </script>
 </body>
 </html>
