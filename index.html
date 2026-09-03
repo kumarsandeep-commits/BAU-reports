@@ -96,27 +96,6 @@ function sendReportEmail(plan, eod, toEmail, onResult) {
 }
 /* ── END EMAIL ─────────────────────────────────────────────── */
 
-
-/* ── GOOGLE SHEETS SYNC ─────────────────────────────────────────── */
-var SHEETS_URL = "https://script.google.com/macros/s/AKfycbzZAmfeYwcwHvbSRDqPH0GY7RQbbOJN2YnYV0VMaqvmG_F4aAUO1FALEoUWuNlB8S6RpA/exec";
-function postToSheet(type, data) {
-  if (!SHEETS_URL || SHEETS_URL.indexOf("YOUR_") >= 0) return;
-  var p = {type:type, memberName:data.memberName||"", memberId:data.memberId||"",
-    date:data.date||"", visitsCount:(data.visits||[]).filter(function(v){return v&&v.dealer;}).length,
-    trainings:data.trainings||"", totalLeads:data.totalLeads||"", enqLeads:data.enqLeads||"",
-    leadQuality:data.leadQuality||"", p90today:data.p90today||"", p90value:data.p90value||"",
-    mtdRevenue:data.mtdRevenue||"", aiScanCount:data.aiScanCount||"",
-    xchargeCoupon:data.xchargeCoupon||"", customerEnvelope:data.customerEnvelope||"",
-    p50:data.p50||"", dnp:data.dnp||"", ni:data.ni||"", p90long:data.p90long||"",
-    handTotal:data.handTotal||"",
-    toolScore:Object.values(data.tools||{}).filter(Boolean).length,
-    insight:data.insight||"", escalation:data.escalation||""};
-  try {
-    fetch(SHEETS_URL, {method:"POST", headers:{"Content-Type":"text/plain"}, body:JSON.stringify(p)})
-      .catch(function(e){console.log("Sheet:",e);});
-  } catch(e) {}
-}
-/* ── END SHEETS ─────────────────────────────────────────────────── */
 /* ── PRINT FUNCTIONS ──────────────────────────────────── */
 
 /* ── EMAIL SENDER WIDGET ─────────────────────────────────── */
@@ -330,42 +309,34 @@ const TOOLS = [{
   id: "gst",
   name: "Ground Sales Input Tool",
   hint: "Daily lead entries — CRM / ground tool"
-  url: "https://docs.google.com/forms/d/e/1FAIpQLSdQAyY1sQlSfod17_FOaaBFAqb0xyfpEaEcoYREXHOSLjn-wQ/viewform"
 }, {
   id: "lsu",
   name: "Lead Status Update",
   hint: "P90 / P50 / NI / DNP status for all leads"
-  url: "https://docs.google.com/forms/d/e/1FAIpQLScJUHFYtZbrfPBHmmhWZV6EOJqPekxhwsbzkk684iAb5FOWVw/viewform"
 }, {
   id: "tt",
   name: "Training Tool",
   hint: "Log today's training session record"
-  url: "https://docs.google.com/forms/d/e/1FAIpQLSe8I2K_IMV2eLXfSvNcEu82sA9uVqoM4449A_f4t4AtRRT_6g/viewform"
 }, {
   id: "cps",
   name: "Customer Profiling Survey Tool",
   hint: "Profile for newly onboarded customers"
-  url: "https://docs.google.com/forms/d/e/1FAIpQLScAr3Fj4h8DAhIG41FrMFoZJdHIY8ZfNkEo4K9TTLf2ynOaOg/viewform"
 }, {
   id: "sbd",
   name: "Sales cum BD Engagement Tool",
   hint: "BD activity + sales engagement log"
-  url: "https://docs.google.com/forms/d/e/1FAIpQLSfftZyjX_EcHrq4uvCI54x2JI61IZ_qqGMZw7psLjTAhE8n_g/viewform"
 }, {
   id: "dft",
   name: "Delivery Forecast Tool",
   hint: "Update expected delivery forecast"
-  url: "https://docs.google.com/forms/d/e/1FAIpQLSf1190pnvNzBRsAL1A38QzLG1J6j3x6ONzt3I0lcJmAkCnBiQ/viewform"
 }, {
   id: "dti",
   name: "Dealership Team Incentive",
   hint: "Update incentive disbursement if applicable"
-  url: ""
 }, {
   id: "gai",
   name: "Ground AI Scanner Check",
   hint: "Daily AI scanner usage verification for ground sales"
-  url: "https://docs.google.com/forms/d/e/1FAIpQLSdoG5jOKD7YrCo3JcIz5W3sdDt-AgNGbpmTtGZjWtQK5S8o2w/viewform"
 }];
 const RATINGS = ["", "Excellent", "Good", "Needs Improvement", "Poor"];
 const MAX_VISITS = 10;
@@ -1425,12 +1396,11 @@ function EodForm({
   const doSave = async (submit = false) => {
     setSaving(true);
     try {
-      const _savedEod = await saveEod(userId, user.name, {
+      await saveEod(userId, user.name, {
         ...eod,
         date: planData?.date || eod.date,
         eodStatus: submit ? "submitted" : "draft"
       });
-      if (submit) postToSheet("eod", _savedEod);
       showT(submit ? "✓ EOD submitted!" : "Draft saved.");
       if (submit) setTimeout(onDone, 800);
     } catch (e) {
@@ -3411,9 +3381,7 @@ function ViewAbdmEod({
         fontWeight: 700,
         color: N
       }
-    }, t.name),
-    t.url && /*#__PURE__*/React.createElement("a", {href:t.url,target:"_blank",rel:"noopener noreferrer",style:{fontSize:10,fontWeight:700,padding:"1px 6px",background:T,color:"white",borderRadius:3,textDecoration:"none",marginLeft:4}}, "Open"),
-    /*#__PURE__*/React.createElement("div", {
+    }, t.name), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 10,
         color: "#9CA3AF",
@@ -4625,3 +4593,5 @@ function GMConsolidated(_ref) {
 </script>
 </body>
 </html>
+
+
