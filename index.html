@@ -22,6 +22,7 @@ var db=firebase.firestore();
 
 
 
+
 firebase.initializeApp({
   apiKey:"AIzaSyBDJZHtfZ14BWENG-lVi-xD5iBY0FCcCQQ",
   authDomain:"hopcharge-field-reports.firebaseapp.com",
@@ -1659,21 +1660,20 @@ function EodForm({
       gap: 10,
       background: eod.tools[t.id] ? "#F7FFFE" : "white"
     }
-  }, /*#__PURE__*/React.createElement("div", null,
-  /*#__PURE__*/React.createElement("div", {style:{display:"flex",alignItems:"center",gap:6}},
-    /*#__PURE__*/React.createElement("div", {
-      style: {fontSize:12,fontWeight:700,color:N}
-    }, t.name),
-    t.url && /*#__PURE__*/React.createElement("a", {
-      href: t.url, target: "_blank", rel: "noopener noreferrer",
-      onClick: function(e){e.stopPropagation();},
-      style: {fontSize:10,fontWeight:700,padding:"2px 7px",background:T,color:"white",
-              borderRadius:4,textDecoration:"none",flexShrink:0,marginLeft:2}
-    }, "Open Tool")
-  ),
-  /*#__PURE__*/React.createElement("div", {
-    style: {fontSize:10,color:"#9CA3AF",fontStyle:"italic",marginTop:2}
-  }, t.hint))), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 12,
+        fontWeight: 700,
+        color: N
+      }
+    }, t.name), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        color: "#9CA3AF",
+        fontStyle: "italic",
+        marginTop: 2
+      }
+    }, t.hint))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 5,
@@ -3475,20 +3475,12 @@ function ViewAbdmEod({
         background: v === "YES" ? "#F0FDF9" : v === "NO" ? "#FFF5F5" : "white"
       }
     }, /*#__PURE__*/React.createElement("div", null,
-  /*#__PURE__*/React.createElement("div", {style:{display:"flex",alignItems:"center",gap:6}},
-    /*#__PURE__*/React.createElement("div", {
-      style: {fontSize:12,fontWeight:700,color:N}
-    }, t.name),
-    t.url && /*#__PURE__*/React.createElement("a", {
-      href: t.url, target: "_blank", rel: "noopener noreferrer",
-      onClick: function(e){e.stopPropagation();},
-      style: {fontSize:10,fontWeight:700,padding:"2px 7px",background:T,color:"white",
-              borderRadius:4,textDecoration:"none",flexShrink:0,marginLeft:2}
-    }, "Open Tool")
-  ),
-  /*#__PURE__*/React.createElement("div", {
-    style: {fontSize:10,color:"#9CA3AF",fontStyle:"italic",marginTop:2}
-  }, t.hint)), /*#__PURE__*/React.createElement("span", {
+      /*#__PURE__*/React.createElement("div", {style:{display:"flex",alignItems:"center",gap:5}},
+        /*#__PURE__*/React.createElement("div", {style:{fontSize:12,fontWeight:700,color:N}}, t.name),
+        t.url && /*#__PURE__*/React.createElement("a", {href:t.url,target:"_blank",rel:"noopener noreferrer",style:{fontSize:10,fontWeight:700,padding:"1px 6px",background:T,color:"white",borderRadius:3,textDecoration:"none",flexShrink:0}}, "Open")
+      ),
+      /*#__PURE__*/React.createElement("div", {style:{fontSize:10,color:"#9CA3AF",fontStyle:"italic",marginTop:2}}, t.hint)
+    ), /*#__PURE__*/React.createElement("span", {
       style: {
         fontWeight: 800,
         fontSize: 12,
@@ -4691,6 +4683,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 
 
