@@ -19,6 +19,17 @@ var db=firebase.firestore();
 </script>
 <script>
 
+/* ── MOBILE VIEW TOGGLE ─────────────────────────────────────────── */
+var _mobileMode = window.innerWidth < 768;
+function isMob() { return _mobileMode; }
+function toggleMob() {
+  _mobileMode = !_mobileMode;
+  window.dispatchEvent(new CustomEvent("mob-toggle"));
+}
+/* ── END MOBILE ─────────────────────────────────────────────────── */
+
+
+
 
 
 
@@ -948,6 +959,20 @@ const Nav = ({
     color: "rgba(255,255,255,.4)"
   }
 }, user.role.toUpperCase())), /*#__PURE__*/React.createElement("button", {
+  onClick: toggleMob,
+  title: isMob() ? "Switch to Desktop view" : "Switch to Mobile view",
+  style: {
+    padding: "5px 10px",
+    background: "rgba(255,255,255,.15)",
+    color: "white",
+    border: "1px solid rgba(255,255,255,.3)",
+    borderRadius: 6,
+    fontSize: 11,
+    fontWeight: 700,
+    cursor: "pointer",
+    marginRight: 6
+  }
+}, isMob() ? "[ Desktop ]" : "[ Mobile ]"), /*#__PURE__*/React.createElement("button", {
   onClick: onLogout,
   style: {
     padding: "5px 11px",
@@ -1348,7 +1373,7 @@ function PlanForm({
   }, "✕")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement(SmartSel, {
@@ -1366,7 +1391,7 @@ function PlanForm({
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr 1fr",
+      gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement(Inp, {
@@ -1611,7 +1636,7 @@ function EodForm({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr",
       gap: 8
     }
   }, TOOLS.map(t => /*#__PURE__*/React.createElement("div", {
@@ -1704,7 +1729,7 @@ function EodForm({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement(Inp, {
@@ -1773,7 +1798,7 @@ function EodForm({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "repeat(5,1fr)",
+      gridTemplateColumns: isMob() ? "1fr 1fr" : "repeat(5,1fr)",
       gap: 9
     }
   }, stages.map(st => /*#__PURE__*/React.createElement("div", {
@@ -1988,7 +2013,7 @@ function BdmMorningForm({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -2029,7 +2054,7 @@ function BdmMorningForm({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement(Inp, {
@@ -2302,7 +2327,7 @@ function BdmEodForm({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -2340,7 +2365,7 @@ function BdmEodForm({
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -2371,7 +2396,7 @@ function BdmEodForm({
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -2545,7 +2570,7 @@ function BdmDashboard({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr",
       gap: 14,
       marginBottom: 18
     }
@@ -2884,7 +2909,7 @@ function GMDashboard({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "repeat(4,1fr)",
+      gridTemplateColumns: isMob() ? "1fr 1fr" : "repeat(4,1fr)",
       gap: 12,
       marginBottom: 18
     }
@@ -3440,7 +3465,7 @@ function ViewAbdmEod({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr",
       gap: 7
     }
   }, TOOLS.map(t => {
@@ -3500,7 +3525,7 @@ function ViewAbdmEod({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "repeat(4,1fr)",
+      gridTemplateColumns: isMob() ? "1fr 1fr" : "repeat(4,1fr)",
       gap: 9
     }
   }, [{
@@ -3564,7 +3589,7 @@ function ViewAbdmEod({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "repeat(5,1fr)",
+      gridTemplateColumns: isMob() ? "1fr 1fr" : "repeat(5,1fr)",
       gap: 9
     }
   }, stages.map(st => /*#__PURE__*/React.createElement("div", {
@@ -3777,7 +3802,7 @@ function ViewBdmMorning({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr",
       gap: "0 14px"
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -3960,7 +3985,7 @@ function ViewBdmEod({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "repeat(3,1fr)",
+      gridTemplateColumns: isMob() ? "1fr 1fr" : "repeat(3,1fr)",
       gap: 10,
       marginBottom: 12
     }
@@ -4126,7 +4151,7 @@ function AbdmDashboard({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr",
       gap: 14,
       marginBottom: 18
     }
@@ -4292,6 +4317,12 @@ function AbdmDashboard({
 // MAIN APP
 // ═══════════════════════════════════════════════
 function App() {
+  var _mobTick = React.useState(0);
+  React.useEffect(function() {
+    var handler = function() { _mobTick[1](function(t) { return t + 1; }); };
+    window.addEventListener("mob-toggle", handler);
+    return function() { window.removeEventListener("mob-toggle", handler); };
+  }, []);
   const [user, setUser] = useState(null);
   const [uid, setUid] = useState("");
   const [view, setView] = useState("login");
@@ -4579,7 +4610,7 @@ function GMConsolidated(_ref) {
       ) : React.createElement("div",{style:{padding:"8px 12px",background:"#F7F8FC",borderRadius:7,color:"#9CA3AF",fontSize:12,marginBottom:8}},"Plan not submitted"),
       eo ? wrapSec(sectionHdr("EOD","EOD Report",T),
         React.createElement("div",null,
-          React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:10}},
+          React.createElement("div",{style:{display:"grid",gridTemplateColumns:isMob() ? "1fr 1fr" : "repeat(4,1fr)",gap:8,marginBottom:10}},
             metricCard("Trainings",eo.trainings),metricCard("Total Leads",eo.totalLeads),
             metricCard("Lead Quality %",eo.leadQuality),metricCard("P90 Today/Active",eo.p90today),
             metricCard("MTD Revenue",eo.mtdRevenue),metricCard("P90 Value",eo.p90value),
@@ -4619,7 +4650,7 @@ function GMConsolidated(_ref) {
     ),
     bdmM&&wrapSec(sectionHdr("Morning","Morning Review",AM),
       React.createElement("div",null,
-        React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}},
+        React.createElement("div",{style:{display:"grid",gridTemplateColumns:isMob() ? "1fr" : "1fr 1fr",gap:8,marginBottom:8}},
           React.createElement("div",null,React.createElement("div",{style:{fontSize:9,fontWeight:700,color:"#6B7280",marginBottom:3}},"MEETING HELD"),React.createElement("span",{style:{fontWeight:800,fontSize:14,color:bdmM.meetingHeld==="YES"?T:P}},bdmM.meetingHeld||"--")),
           React.createElement("div",null,React.createElement("div",{style:{fontSize:9,fontWeight:700,color:"#6B7280",marginBottom:3}},"TIME"),React.createElement("div",{style:{fontWeight:600,fontSize:13}},bdmM.meetingTime||"--"))
         ),
@@ -4686,6 +4717,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 
 
