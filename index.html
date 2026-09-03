@@ -20,6 +20,7 @@ var db=firebase.firestore();
 <script>
 
 
+
 /* ── GOOGLE SHEETS SYNC ─────────────────────────────────────────── */
 var SHEETS_URL = "https://script.google.com/macros/s/AKfycbzZAmfeYwcwHvbSRDqPH0GY7RQbbOJN2YnYV0VMaqvmG_F4aAUO1FALEoUWuNlB8S6RpA/exec";
 function postToSheet(type, data) {
@@ -29,12 +30,17 @@ function postToSheet(type, data) {
     memberName: data.memberName || "",
     memberId: data.memberId || "",
     date: data.date || "",
-    visitsCount: (data.visits || []).filter(function(v){return v && v.dealer;}).length,
-    dealerships: (data.visits || []).filter(function(v){return v && v.dealer;}).map(function(v){return v.dealer==="Other"&&v.dealerOther?v.dealerOther:v.dealer;}).join(" | "),
-    meetWith: (data.visits || []).filter(function(v){return v && v.dealer;}).map(function(v){return v.meetWith||"";}).join(" | "),
-    designations: (data.visits || []).filter(function(v){return v && v.dealer;}).map(function(v){return v.desig==="Other"&&v.desigOther?v.desigOther:v.desig||"";}).join(" | "),
-    purposes: (data.visits || []).filter(function(v){return v && v.dealer;}).map(function(v){return v.purpose==="Other"&&v.purposeOther?v.purposeOther:v.purpose||"";}).join(" | "),
-    visitStatuses: (data.visitStatus || []).filter(function(s){return s;}).join(" | "),
+    visitsArray: (data.visits || []).filter(function(v){return v && v.dealer;}).map(function(v, i){
+      return {
+        dealer: v.dealer==="Other" && v.dealerOther ? v.dealerOther : v.dealer,
+        time: v.time || "",
+        meetWith: v.meetWith || "",
+        designation: v.desig==="Other" && v.desigOther ? v.desigOther : (v.desig || ""),
+        purpose: v.purpose==="Other" && v.purposeOther ? v.purposeOther : (v.purpose || ""),
+        agenda: v.agenda || "",
+        status: (data.visitStatus || [])[i] || ""
+      };
+    }),
     trainings: data.trainings || "",
     totalLeads: data.totalLeads || "",
     enqLeads: data.enqLeads || "",
@@ -4638,6 +4644,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 
 </script>
