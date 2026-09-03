@@ -20,6 +20,8 @@ var db=firebase.firestore();
 <script>
 
 
+
+
 firebase.initializeApp({
   apiKey:"AIzaSyBDJZHtfZ14BWENG-lVi-xD5iBY0FCcCQQ",
   authDomain:"hopcharge-field-reports.firebaseapp.com",
@@ -174,10 +176,9 @@ function postToSheet(type, data) {
   try {
     fetch(SHEETS_URL, {
       method: "POST",
-      mode: "no-cors",
-      headers: {"Content-Type": "application/json"},
+      headers: {"Content-Type": "text/plain"},
       body: JSON.stringify(payload)
-    });
+    }).catch(function(e){console.log("Sheet sync:",e);});
   } catch(e) { console.log("Sheet sync:", e); }
 }
 /* ── END SHEETS ─────────────────────────────────────────────── */
@@ -1713,7 +1714,7 @@ function EodForm({
       fontSize: 20,
       color: filled === TOOLS.length ? T : filled >= 4 ? AM : P
     }
-  }, filled, "/" + TOOLS.length))), step === 3 && /*#__PURE__*/React.createElement(Card, {
+  }, filled, "/" + TOOLS.length)), step === 3 && /*#__PURE__*/React.createElement(Card, {
     code: "C",
     title: "Daily Sales & BD Tracking",
     sub: "Target ₹21,000 · P90 ≥2/day",
@@ -4690,6 +4691,8 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
+
 
 
 </script>
