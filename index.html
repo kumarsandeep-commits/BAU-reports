@@ -21,6 +21,7 @@ var db=firebase.firestore();
 
 
 
+
 /* ── GOOGLE SHEETS SYNC ─────────────────────────────────────────── */
 var SHEETS_URL = "https://script.google.com/macros/s/AKfycbzZAmfeYwcwHvbSRDqPH0GY7RQbbOJN2YnYV0VMaqvmG_F4aAUO1FALEoUWuNlB8S6RpA/exec";
 function postToSheet(type, data) {
@@ -1214,10 +1215,11 @@ function PlanForm({
   const doSave = async (submit = false) => {
     setSaving(true);
     try {
-      await savePlan(userId, user.name, {
+      const _savedPlan = await savePlan(userId, user.name, {
         ...plan,
         planStatus: submit ? "submitted" : "draft"
       });
+      if (submit) postToSheet("plan", _savedPlan);
       showT(submit ? "✓ Plan submitted!" : "Draft saved.");
       if (submit) setTimeout(onDone, 800);
     } catch (e) {
@@ -4644,6 +4646,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 
 
