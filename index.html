@@ -19,6 +19,7 @@ var db=firebase.firestore();
 </script>
 <script>
 
+
 /* ── GOOGLE SHEETS SYNC ─────────────────────────────────────────── */
 var SHEETS_URL = "https://script.google.com/macros/s/AKfycbzZAmfeYwcwHvbSRDqPH0GY7RQbbOJN2YnYV0VMaqvmG_F4aAUO1FALEoUWuNlB8S6RpA/exec";
 function postToSheet(type, data) {
@@ -29,6 +30,11 @@ function postToSheet(type, data) {
     memberId: data.memberId || "",
     date: data.date || "",
     visitsCount: (data.visits || []).filter(function(v){return v && v.dealer;}).length,
+    dealerships: (data.visits || []).filter(function(v){return v && v.dealer;}).map(function(v){return v.dealer==="Other"&&v.dealerOther?v.dealerOther:v.dealer;}).join(" | "),
+    meetWith: (data.visits || []).filter(function(v){return v && v.dealer;}).map(function(v){return v.meetWith||"";}).join(" | "),
+    designations: (data.visits || []).filter(function(v){return v && v.dealer;}).map(function(v){return v.desig==="Other"&&v.desigOther?v.desigOther:v.desig||"";}).join(" | "),
+    purposes: (data.visits || []).filter(function(v){return v && v.dealer;}).map(function(v){return v.purpose==="Other"&&v.purposeOther?v.purposeOther:v.purpose||"";}).join(" | "),
+    visitStatuses: (data.visitStatus || []).filter(function(s){return s;}).join(" | "),
     trainings: data.trainings || "",
     totalLeads: data.totalLeads || "",
     enqLeads: data.enqLeads || "",
@@ -1442,7 +1448,7 @@ function EodForm({
         date: planData?.date || eod.date,
         eodStatus: submit ? "submitted" : "draft"
       });
-      if (submit) postToSheet("eod", _savedEod);
+      if (submit) postToSheet("eod", {..._savedEod, visits: planData?.visits || []});
       showT(submit ? "✓ EOD submitted!" : "Draft saved.");
       if (submit) setTimeout(onDone, 800);
     } catch (e) {
@@ -4632,6 +4638,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 </script>
 </body>
