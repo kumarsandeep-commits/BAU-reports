@@ -19,6 +19,7 @@ var db=firebase.firestore();
 </script>
 <script>
 
+
 /* ── MOBILE VIEW TOGGLE ─────────────────────────────────────────── */
 var _mobileMode = window.innerWidth < 768;
 function isMob() { return _mobileMode; }
@@ -357,7 +358,8 @@ const LOGO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAD20AAAJVCAYAAABHto95
 const USERS = {
   "ABDM011": {name:"Tarun",        role:"abdm", password:"tarun@1231"},
   "ABDM021": {name:"Anoop Jha",    role:"abdm", password:"anoop@1241"},
-  "AMS100":  {name:"Surya",role:"Account Manager Sales",  password:"ams#1000"},
+  "BDM100":  {name:"Gautam Grover",role:"bdm",  password:"BDM#1000"},
+  "AMS100":  {name:"Surya",        role:"bdm",  password:"AMS#1000"},
   "GM407":   {name:"Sandeep Kumar",role:"gm",   password:"gm*1324"}
 };
 const MEMBER_IDS = Object.keys(USERS).filter(k => USERS[k].role === "abdm");
@@ -406,11 +408,6 @@ const TOOLS = [{
   name: "Dealership Team Incentive",
   hint: "Use the Zone Wise Google Sheet Shared — link TBC",
   url: ""
-}, {
-  id: "gai",
-  name: "Ground AI Scanner Check",
-  hint: "Daily AI scanner usage verification for ground sales",
-  url: "https://docs.google.com/forms/d/e/1FAIpQLSdoG5jOKD7YrCo3JcIz5W3sdDt-AgNGbpmTtGZjWtQK5S8o2w/viewform"
 }];
 const RATINGS = ["", "Excellent", "Good", "Needs Improvement", "Poor"];
 const MAX_VISITS = 10;
@@ -1856,7 +1853,7 @@ function EodForm({
     value: eod.escalation,
     onChange: v => upd("escalation", v),
     rows: 2,
-    hint: "Requires BDM/Account Manager Sales attention"
+    hint: "Requires BDM attention"
   }))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -1937,7 +1934,7 @@ function BdmMorningForm({
     }
     setSaving(false);
   };
-  const steps = ["Morning Meeting", "Tata Tele Review", "ABDM Plan Reviews", "BDM/Account Manager Sales Actions"];
+  const steps = ["Morning Meeting", "Tata Tele Review", "ABDM Plan Reviews", "BDM Actions"];
   return /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
@@ -4717,6 +4714,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 
 
