@@ -357,7 +357,7 @@ const LOGO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAD20AAAJVCAYAAABHto95
 const USERS = {
   "ABDM011": {name:"Tarun",        role:"abdm", password:"tarun@1231"},
   "ABDM021": {name:"Anoop Jha",    role:"abdm", password:"anoop@1241"},
-  "BDM100":  {name:"Gautam Grover",role:"BDM",  password:"ams#1000"},
+  "AMS100":  {name:"Surya",role:"Account Manager Sales",  password:"ams#1000"},
   "GM407":   {name:"Sandeep Kumar",role:"gm",   password:"gm*1324"}
 };
 const MEMBER_IDS = Object.keys(USERS).filter(k => USERS[k].role === "abdm");
@@ -1856,7 +1856,7 @@ function EodForm({
     value: eod.escalation,
     onChange: v => upd("escalation", v),
     rows: 2,
-    hint: "Requires BDM attention"
+    hint: "Requires BDM/Account Manager Sales attention"
   }))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -1937,7 +1937,7 @@ function BdmMorningForm({
     }
     setSaving(false);
   };
-  const steps = ["Morning Meeting", "Tata Tele Review", "ABDM Plan Reviews", "BDM Actions"];
+  const steps = ["Morning Meeting", "Tata Tele Review", "ABDM Plan Reviews", "BDM/Account Manager Sales Actions"];
   return /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
