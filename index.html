@@ -20,6 +20,7 @@ var db=firebase.firestore();
 <script>
 
 
+
 /* ── MOBILE VIEW TOGGLE ─────────────────────────────────────────── */
 var _mobileMode = window.innerWidth < 768;
 function isMob() { return _mobileMode; }
@@ -332,8 +333,8 @@ function printConsolidated(date, allPlans, allEods, bdmMorning, bdmEod, memberId
     body += '</div>';
   });
   if(bdmMorning||bdmEod){
-    var bdmName = (bdmMorning||bdmEod).bdmName||'BDM';
-    body += '<div class="pgb" style="margin-bottom:20px"><h2 style="font-size:12px;font-weight:900;padding:5px 10px;background:#fef9ee;border-left:4px solid #F59E0B;margin-bottom:8px">'+bdmName+' - BDM Reviews</h2>';
+    var bdmName = (bdmMorning||bdmEod).bdmName||'Manager';
+    body += '<div class="pgb" style="margin-bottom:20px"><h2 style="font-size:12px;font-weight:900;padding:5px 10px;background:#fef9ee;border-left:4px solid #F59E0B;margin-bottom:8px">'+bdmName+' - Reviews</h2>';
     body += buildPrintBody(null,null,bdmMorning,bdmEod);
     body += '</div>';
   }
@@ -356,11 +357,11 @@ const LOGO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAD20AAAJVCAYAAABHto95
 
 // ── TEAM CONFIG ─────────────────────────────────
 const USERS = {
-  "ABDM011": {name:"Tarun",        role:"abdm", password:"tarun@1231"},
-  "ABDM021": {name:"Anoop Jha",    role:"abdm", password:"anoop@1241"},
-  "BDM100":  {name:"Gautam Grover",role:"bdm",  password:"BDM#1000"},
-  "AMS100":  {name:"Surya",        role:"bdm",  password:"AMS#1000"},
-  "GM407":   {name:"Sandeep Kumar",role:"gm",   password:"gm*1324"}
+  "ABDM011": {name:"Tarun",        role:"abdm", designation:"ABDM",              password:"tarun@1231"},
+  "ABDM021": {name:"Anoop Jha",    role:"abdm", designation:"ABDM",              password:"anoop@1241"},
+  "BDM100":  {name:"Gautam Grover",role:"bdm",  designation:"BDM",               password:"BDM#1000"},
+  "AMS100":  {name:"Surya",        role:"bdm",  designation:"Account Manager - Sales", password:"AMS#1000"},
+  "GM407":   {name:"Sandeep Kumar",role:"gm",   designation:"GM - Sales",        password:"gm*1324"}
 };
 const MEMBER_IDS = Object.keys(USERS).filter(k => USERS[k].role === "abdm");
 const BDM_IDS = Object.keys(USERS).filter(k => USERS[k].role === "bdm");
@@ -955,7 +956,7 @@ const Nav = ({
     fontSize: 10,
     color: "rgba(255,255,255,.4)"
   }
-}, user.role.toUpperCase())), /*#__PURE__*/React.createElement("button", {
+}, (user.designation || user.role.toUpperCase()))), /*#__PURE__*/React.createElement("button", {
   onClick: toggleMob,
   title: isMob() ? "Switch to Desktop view" : "Switch to Mobile view",
   style: {
@@ -1132,7 +1133,7 @@ function Login({
   }, "Member ID"), /*#__PURE__*/React.createElement("input", {
     value: id,
     onChange: e => setId(e.target.value),
-    placeholder: "e.g. ABDM01 / BDM01 / GM01",
+    placeholder: "e.g. ABDM011 / BDM100 / AMS100 / GM407",
     onKeyDown: e => e.key === "Enter" && go(),
     style: {
       width: "100%",
@@ -4640,9 +4641,9 @@ function GMConsolidated(_ref) {
         bdmM&&React.createElement(Stat,{s:bdmM.morningStatus}),
         bdmE&&React.createElement(Stat,{s:bdmE.eodStatus}),
         React.createElement("button",{
-          onClick:function(){printReport(null,null,bdmM,bdmE,"BDM Report - "+date);},
+          onClick:function(){printReport(null,null,bdmM,bdmE,"Report - "+date);},
           style:{padding:"4px 12px",background:AM,color:"white",border:"none",borderRadius:5,fontSize:11,cursor:"pointer",fontWeight:700}
-        },"Print BDM Report")
+        },"Print Report")
       )
     ),
     bdmM&&wrapSec(sectionHdr("Morning","Morning Review",AM),
@@ -4714,6 +4715,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 
 
