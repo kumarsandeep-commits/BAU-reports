@@ -21,6 +21,7 @@ var db=firebase.firestore();
 
 
 
+
 /* ── MOBILE VIEW TOGGLE ─────────────────────────────────────────── */
 var _mobileMode = window.innerWidth < 768;
 function isMob() { return _mobileMode; }
@@ -258,7 +259,7 @@ function buildPrintBody(plan, eod, bdmM, bdmE) {
     b += '<div class="sec"><div class="sh">E - INSIGHT / OBSERVATION / ESCALATION</div><div class="sb">';
     b += '<div style="font-size:8.5px;font-weight:800;margin-bottom:3px">INSIGHT:</div><div class="wl">'+V(eod.insight)+'</div>';
     b += '<div style="font-size:8.5px;font-weight:800;margin-bottom:3px">ESCALATION / BLOCKER:</div><div class="wl">'+V(eod.escalation)+'</div>';
-    b += '<div style="font-size:8.5px;font-weight:800;margin-bottom:3px">BDM REMARK:</div><div class="wl">'+V(eod.bdmRemark)+'</div>';
+    b += '<div style="font-size:8.5px;font-weight:800;margin-bottom:3px">MANAGER REMARK:</div><div class="wl">'+V(eod.bdmRemark)+'</div>';
     b += '</div></div>';
   }
   // BDM Morning
@@ -295,7 +296,7 @@ function buildPrintBody(plan, eod, bdmM, bdmE) {
       b += '</div></div>';
     });
     if(bdmE.escalationToGM){
-      b += '<div class="sec"><div class="sh" style="background:#c0392b">BDM ESCALATION TO GM</div><div class="sb"><div class="wl">'+bdmE.escalationToGM+'</div></div></div>';
+      b += '<div class="sec"><div class="sh" style="background:#c0392b">MANAGER ESCALATION TO GM</div><div class="sb"><div class="wl">'+bdmE.escalationToGM+'</div></div></div>';
     }
     if(bdmE.tomorrowFocus||bdmE.tomorrowCTAs){
       b += '<div class="sec"><div class="sh">TOMORROW\'S PLAN</div><div class="sb">';
@@ -334,7 +335,7 @@ function printConsolidated(date, allPlans, allEods, bdmMorning, bdmEod, memberId
   });
   if(bdmMorning||bdmEod){
     var bdmName = (bdmMorning||bdmEod).bdmName||'Manager';
-    body += '<div class="pgb" style="margin-bottom:20px"><h2 style="font-size:12px;font-weight:900;padding:5px 10px;background:#fef9ee;border-left:4px solid #F59E0B;margin-bottom:8px">'+bdmName+' - Reviews</h2>';
+    body += '<div class="pgb" style="margin-bottom:20px"><h2 style="font-size:12px;font-weight:900;padding:5px 10px;background:#fef9ee;border-left:4px solid #F59E0B;margin-bottom:8px">'+bdmName+' - '+((USERS[(bdmMorning||bdmEod).bdmId]&&USERS[(bdmMorning||bdmEod).bdmId].designation)||'Manager')+' Reviews</h2>';
     body += buildPrintBody(null,null,bdmMorning,bdmEod);
     body += '</div>';
   }
@@ -1077,7 +1078,7 @@ function Login({
   const go = () => {
     const uid = id.trim().toUpperCase();
     const u = USERS[uid];
-    if (u && u.password === pw) onLogin(uid, u);else setErr("Invalid ID or password. Contact your BDM/GM.");
+    if (u && u.password === pw) onLogin(uid, u);else setErr("Invalid ID or password. Contact your Manager or GM.");
   };
   return /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1850,11 +1851,11 @@ function EodForm({
     rows: 3,
     hint: "Competitor activity / dealer feedback / ground observation / new learning"
   }), /*#__PURE__*/React.createElement(Txt, {
-    label: "Escalation / Blocker (Flag for BDM)",
+    label: "Escalation / Blocker (Flag for Manager)",
     value: eod.escalation,
     onChange: v => upd("escalation", v),
     rows: 2,
-    hint: "Requires BDM attention"
+    hint: "Requires Manager attention"
   }))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -1935,7 +1936,7 @@ function BdmMorningForm({
     }
     setSaving(false);
   };
-  const steps = ["Morning Meeting", "Tata Tele Review", "ABDM Plan Reviews", "BDM Actions"];
+  const steps = ["Morning Meeting", "Tata Tele Review", "ABDM Plan Reviews", "Manager Actions"];
   return /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
@@ -2060,7 +2061,7 @@ function BdmMorningForm({
     value: d.tataCallsListened,
     onChange: v => upd("tataCallsListened", v),
     ph: "Number",
-    hint: "Tata Tele calls reviewed by BDM"
+    hint: "Tata Tele calls reviewed by Manager"
   }), /*#__PURE__*/React.createElement("div", null)), /*#__PURE__*/React.createElement(Txt, {
     label: "Overall Pitch Quality Feedback",
     value: d.tataPitchFeedback,
@@ -2137,27 +2138,27 @@ function BdmMorningForm({
     hint: "Missing visits, wrong dealerships planned, schedule concerns, gaps"
   })))), step === 4 && /*#__PURE__*/React.createElement(Card, {
     code: "BM4",
-    title: "BDM's Own Morning Actions",
-    sub: "Special activities planned by BDM",
+    title: "Own Morning Actions",
+    sub: "Special activities planned by Manager",
     color: AM
   }, /*#__PURE__*/React.createElement(Txt, {
     label: "Special Inquiries to be Attended on behalf of ABDM",
     value: d.specialInquiries,
     onChange: v => upd("specialInquiries", v),
     rows: 3,
-    hint: "High-value leads or walk-ins BDM will personally handle today"
+    hint: "High-value leads or walk-ins Manager will personally handle today"
   }), /*#__PURE__*/React.createElement(Txt, {
     label: "Dealer Interventions / Escalation Visits Planned",
     value: d.dealerInterventions,
     onChange: v => upd("dealerInterventions", v),
     rows: 2,
-    hint: "Dealers BDM plans to visit directly for resolution or support"
+    hint: "Dealers Manager plans to visit directly for resolution or support"
   }), /*#__PURE__*/React.createElement(Txt, {
     label: "Support Planned for ABDM Field Work",
     value: d.supportPlanned,
     onChange: v => upd("supportPlanned", v),
     rows: 2,
-    hint: "How BDM will support ABDM during field hours — calls, visits, objection handling"
+    hint: "How Manager will support ABDM during field hours — calls, visits, objection handling"
   }), /*#__PURE__*/React.createElement(Txt, {
     label: "Other Morning Actions / Notes",
     value: d.otherActions,
@@ -2237,7 +2238,7 @@ function BdmEodForm({
     }
     setSaving(false);
   };
-  const steps = ["ABDM EOD Reviews", "BDM Day Summary", "Escalations & Tomorrow"];
+  const steps = ["ABDM EOD Reviews", "Day Summary", "Escalations & Tomorrow"];
   const ratingColor = r => r === "Excellent" ? T : r === "Good" ? "#10B981" : r === "Needs Improvement" ? AM : r === "Poor" ? P : "#9CA3AF";
   return /*#__PURE__*/React.createElement("div", {
     style: {
@@ -2434,27 +2435,27 @@ function BdmEodForm({
     hint: "Issues requiring GM attention related to this ABDM"
   })))), step === 2 && /*#__PURE__*/React.createElement(Card, {
     code: "BM-EOD2",
-    title: "BDM Day Summary",
-    sub: "What BDM handled & resolved today",
+    title: "Day Summary",
+    sub: "What Manager handled & resolved today",
     color: AM
   }, /*#__PURE__*/React.createElement(Txt, {
     label: "Objections / Escalations Handled Today",
     value: d.objectionsHandled,
     onChange: v => upd("objectionsHandled", v),
     rows: 3,
-    hint: "Customer objections or ABDM escalations BDM personally resolved"
+    hint: "Customer objections or ABDM escalations Manager personally resolved"
   }), /*#__PURE__*/React.createElement(Txt, {
     label: "Special Inquiries Closed on behalf of ABDM",
     value: d.specialInquiriesClosed,
     onChange: v => upd("specialInquiriesClosed", v),
     rows: 2,
-    hint: "High-value or special cases BDM handled during the day"
+    hint: "High-value or special cases Manager handled during the day"
   }), /*#__PURE__*/React.createElement(Txt, {
     label: "Support / Coaching Given to ABDM Field Team",
     value: d.supportGiven,
     onChange: v => upd("supportGiven", v),
     rows: 2,
-    hint: "How BDM supported team in field — calls, visits, training on-ground"
+    hint: "How Manager supported team in field — calls, visits, training on-ground"
   }), /*#__PURE__*/React.createElement(Txt, {
     label: "P90 Pipeline Review Notes",
     value: d.p90PipelineNotes,
@@ -2558,7 +2559,7 @@ function BdmDashboard({
     user: user,
     uid: uid,
     onLogout: onLogout,
-    title: "BDM Dashboard"
+    title: "Manager Dashboard"
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       maxWidth: 960,
@@ -2920,11 +2921,11 @@ function GMDashboard({
     v: `${te.filter(r => r.eodStatus === "submitted").length}/${MEMBER_IDS.length}`,
     c: T
   }, {
-    l: "BDM Morning",
+    l: "Morning Review",
     v: tbm.some(r => r.morningStatus === "submitted") ? "✓ Done" : "Pending",
     c: AM
   }, {
-    l: "BDM EOD",
+    l: "EOD Review",
     v: tbe.some(r => r.eodStatus === "submitted") ? "✓ Done" : "Pending",
     c: P
   }].map(c => /*#__PURE__*/React.createElement("div", {
@@ -3174,7 +3175,7 @@ function GMDashboard({
           color: "#9CA3AF",
           fontWeight: 400
         }
-      }, "(BDM)")), /*#__PURE__*/React.createElement("div", {
+      }, "(Manager)")), /*#__PURE__*/React.createElement("div", {
         style: {
           display: "flex",
           gap: 7,
@@ -3232,7 +3233,7 @@ function GMDashboard({
           color: P,
           fontWeight: 700
         }
-      }, "⚠ BDM Escalation")));
+      }, "⚠ Manager Escalation")));
     })));
   }))));
 }
@@ -3661,7 +3662,7 @@ function ViewAbdmEod({
       color: N,
       marginBottom: 5
     }
-  }, "BDM REMARK"), /*#__PURE__*/React.createElement("textarea", {
+  }, "MANAGER REMARK"), /*#__PURE__*/React.createElement("textarea", {
     value: remark,
     onChange: e => setRemark(e.target.value),
     rows: 2,
@@ -3706,7 +3707,7 @@ function ViewAbdmEod({
       color: N,
       marginBottom: 4
     }
-  }, "BDM REMARK"), /*#__PURE__*/React.createElement("div", {
+  }, "MANAGER REMARK"), /*#__PURE__*/React.createElement("div", {
     style: {
       padding: "9px 12px",
       background: "#FFF8E1",
@@ -3764,7 +3765,7 @@ function ViewBdmMorning({
     user: user,
     uid: uid,
     onLogout: onLogout,
-    title: "BDM Morning Review"
+    title: "Morning Review"
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       background: "white",
@@ -3787,7 +3788,7 @@ function ViewBdmMorning({
     }
   }, data.bdmName, " — ", data.date, " — Morning Review"), /*#__PURE__*/React.createElement(Stat, {
     s: data.morningStatus
-  })), /*#__PURE__*/React.createElement("button", {"onClick": function(){printReport(null,null,data,null,"BDM Morning Review");},"style": {padding:"6px 14px",background:T,color:"white",border:"none",borderRadius:6,fontSize:12,cursor:"pointer",fontWeight:700}}, "Print / PDF"), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement("button", {"onClick": function(){printReport(null,null,data,null,"Morning Review");},"style": {padding:"6px 14px",background:T,color:"white",border:"none",borderRadius:6,fontSize:12,cursor:"pointer",fontWeight:700}}, "Print / PDF"), /*#__PURE__*/React.createElement("div", {
     style: {
       maxWidth: 900,
       margin: "0 auto",
@@ -3879,7 +3880,7 @@ function ViewBdmMorning({
     v: ar.flags
   }))), /*#__PURE__*/React.createElement(Card, {
     code: "BM4",
-    title: "BDM Morning Actions",
+    title: "Morning Actions",
     color: AM
   }, /*#__PURE__*/React.createElement(Field, {
     l: "Special Inquiries Planned",
@@ -3946,7 +3947,7 @@ function ViewBdmEod({
     user: user,
     uid: uid,
     onLogout: onLogout,
-    title: "BDM EOD Review"
+    title: "EOD Review"
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       background: "white",
@@ -3969,7 +3970,7 @@ function ViewBdmEod({
     }
   }, data.bdmName, " — ", data.date, " — EOD Review"), /*#__PURE__*/React.createElement(Stat, {
     s: data.eodStatus
-  })), /*#__PURE__*/React.createElement("button", {"onClick": function(){printReport(null,null,null,data,"BDM EOD Review");},"style": {padding:"6px 14px",background:T,color:"white",border:"none",borderRadius:6,fontSize:12,cursor:"pointer",fontWeight:700}}, "Print / PDF"), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement("button", {"onClick": function(){printReport(null,null,null,data,"EOD Review");},"style": {padding:"6px 14px",background:T,color:"white",border:"none",borderRadius:6,fontSize:12,cursor:"pointer",fontWeight:700}}, "Print / PDF"), /*#__PURE__*/React.createElement("div", {
     style: {
       maxWidth: 900,
       margin: "0 auto",
@@ -4069,7 +4070,7 @@ function ViewBdmEod({
     hl: P
   }))), /*#__PURE__*/React.createElement(Card, {
     code: "BM-S",
-    title: "BDM Day Summary",
+    title: "Day Summary",
     color: AM
   }, /*#__PURE__*/React.createElement(Field, {
     l: "Objections / Escalations Handled",
@@ -4626,7 +4627,7 @@ function GMConsolidated(_ref) {
             React.createElement("div",{style:{padding:"7px 10px",background:"#FFF5F5",border:"1px solid #FEE2E2",borderRadius:5,fontSize:12}},(eo.escalation))
           ),
           eo.bdmRemark&&React.createElement("div",null,
-            React.createElement("div",{style:{fontSize:9,fontWeight:700,color:N,marginBottom:3,textTransform:"uppercase"}},"BDM Remark"),
+            React.createElement("div",{style:{fontSize:9,fontWeight:700,color:N,marginBottom:3,textTransform:"uppercase"}},"Manager Remark"),
             React.createElement("div",{style:{padding:"7px 10px",background:"#FFF8E1",border:"1px solid #FDE68A",borderRadius:5,fontSize:12}},(eo.bdmRemark))
           )
         )
@@ -4636,7 +4637,7 @@ function GMConsolidated(_ref) {
 
   var bdmSection = (bdmM||bdmE) ? React.createElement("div",{style:{marginBottom:20}},
     React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,padding:"8px 12px",background:"#FEF9EE",borderRadius:7,border:"1px solid #FDE68A"}},
-      React.createElement("div",{style:{fontSize:15,fontWeight:800,color:AM}},(bdmM||bdmE).bdmName," - BDM"),
+      React.createElement("div",{style:{fontSize:15,fontWeight:800,color:AM}},(bdmM||bdmE).bdmName," - ",(USERS[(bdmM||bdmE).bdmId]&&USERS[(bdmM||bdmE).bdmId].designation)||"Manager"),
       React.createElement("div",{style:{display:"flex",gap:8,alignItems:"center"}},
         bdmM&&React.createElement(Stat,{s:bdmM.morningStatus}),
         bdmE&&React.createElement(Stat,{s:bdmE.eodStatus}),
@@ -4683,7 +4684,7 @@ function GMConsolidated(_ref) {
           );
         }),
         bdmE.escalationToGM&&React.createElement("div",{style:{padding:"10px 12px",background:"#FEE2E2",borderRadius:6,border:"1px solid #FCA5A5",marginTop:8}},
-          React.createElement("div",{style:{fontSize:9,fontWeight:700,color:P,marginBottom:4}},"BDM ESCALATION TO GM"),
+          React.createElement("div",{style:{fontSize:9,fontWeight:700,color:P,marginBottom:4}},"MANAGER ESCALATION TO GM"),
           React.createElement("div",{style:{fontSize:13,fontWeight:600,color:N}},(bdmE.escalationToGM))
         ),
         (bdmE.tomorrowFocus||bdmE.tomorrowCTAs)&&React.createElement("div",{style:{marginTop:10,padding:"9px 12px",background:"#F7FFFE",borderRadius:6}},
@@ -4715,6 +4716,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 
 
