@@ -23,6 +23,7 @@ var db=firebase.firestore();
 
 
 
+
 /* ── MOBILE VIEW TOGGLE ─────────────────────────────────────────── */
 var _mobileMode = window.innerWidth < 768;
 function isMob() { return _mobileMode; }
@@ -3366,18 +3367,7 @@ function ViewAbdmPlan({
       fontSize: 12,
       color: c ? N : "#CBD5E1"
     }
-  }, c || "\u2014")))))))), plan.deliveryPlanned ? /*#__PURE__*/React.createElement(Card, {
-    code: "B",
-    title: "Delivery Target",
-    sub: "Vehicle deliveries planned for today",
-    color: T
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {padding:"12px 16px",background:"#F0FDFA",borderRadius:8,border:"1px solid #99F6E4"}
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {fontSize:11,fontWeight:700,color:"#6B7280",textTransform:"uppercase",marginBottom:4}
-  }, "# Delivery Planned"), /*#__PURE__*/React.createElement("div", {
-    style: {fontSize:28,fontWeight:900,color:T}
-  }, plan.deliveryPlanned))) : null)));
+  }, c || "\u2014"))))))))), plan.deliveryPlanned ? /*#__PURE__*/React.createElement(Card, {code:"B",title:"Delivery Target",sub:"Vehicle deliveries planned for today",color:T}, /*#__PURE__*/React.createElement("div",{style:{padding:"14px 18px",background:"#F0FDFA",borderRadius:8,border:"1px solid #99F6E4",textAlign:"center"}}, /*#__PURE__*/React.createElement("div",{style:{fontSize:11,fontWeight:700,color:"#6B7280",textTransform:"uppercase",letterSpacing:.4,marginBottom:6}},"# Delivery Planned Today"), /*#__PURE__*/React.createElement("div",{style:{fontSize:36,fontWeight:900,color:T,lineHeight:1}},plan.deliveryPlanned))) : null));
 }
 function ViewAbdmEod({
   user,
@@ -4756,6 +4746,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 
 
