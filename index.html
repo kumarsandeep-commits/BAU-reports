@@ -30,6 +30,7 @@ var db=firebase.firestore();
 
 
 
+
 /* ── MOBILE VIEW TOGGLE ─────────────────────────────────────────── */
 var _mobileMode = window.innerWidth < 768;
 function isMob() { return _mobileMode; }
@@ -77,6 +78,7 @@ function postToSheet(type, data) {
     customerEnvelope: data.customerEnvelope || "",
     deliveryPlanned: data.deliveryPlanned || "",
     actualDelivery: data.actualDelivery || "",
+    personalLeads: data.personalLeads || "",
     p50: data.p50 || "",
     dnp: data.dnp || "",
     ni: data.ni || "",
@@ -497,6 +499,7 @@ const mkEod = () => ({
   xchargeCoupon: "",
   customerEnvelope: "",
   actualDelivery: "",
+  personalLeads: "",
   eodStatus: "draft"
 });
 const mkAbdmReview = () => MEMBER_IDS.map(mid => ({
@@ -1838,6 +1841,12 @@ function EodForm({
     hint: "Number of combo units actually delivered today"
   }),
   /*#__PURE__*/React.createElement(Inp, {
+    label: "# Personally Attended Leads",
+    value: eod.personalLeads,
+    onChange: function(v){return upd("personalLeads",v);},
+    hint: "Leads you personally handled at the dealership today"
+  }),
+  /*#__PURE__*/React.createElement(Inp, {
     label: "Number of AI Scans",
     value: eod.aiScanCount,
     onChange: function(v){return upd("aiScanCount",v);},
@@ -3040,6 +3049,34 @@ function GMDashboard({
     v: `${te.filter(r => r.eodStatus === "submitted").length}/${MEMBER_IDS.length}`,
     c: T
   }, {
+    l: "Delivery Planned",
+    v: tp.reduce((s,r) => s + (parseFloat(r.deliveryPlanned)||0), 0),
+    c: N
+  }, {
+    l: "Actual Delivery",
+    v: te.reduce((s,r) => s + (parseFloat(r.actualDelivery)||0), 0),
+    c: T
+  }, {
+    l: "Leads Punched",
+    v: te.reduce((s,r) => s + (parseFloat(r.totalLeads)||0), 0),
+    c: N
+  }, {
+    l: "Personal Leads",
+    v: te.reduce((s,r) => s + (parseFloat(r.personalLeads)||0), 0),
+    c: AM
+  }, {
+    l: "P90 Today",
+    v: te.reduce((s,r) => {var p = String(r.p90today||"").split("/")[0]; return s + (parseFloat(p)||0);}, 0),
+    c: P
+  }, {
+    l: "xCharge Coupons",
+    v: te.reduce((s,r) => s + (parseFloat(r.xchargeCoupon)||0), 0),
+    c: T
+  }, {
+    l: "Daily Sales (₹)",
+    v: te.reduce((s,r) => s + (parseFloat(r.mtdRevenue)||0), 0).toLocaleString("en-IN"),
+    c: AM
+  }, {
     l: "Morning Review",
     v: tbm.some(r => r.morningStatus === "submitted") ? "✓ Done" : "Pending",
     c: AM
@@ -3673,6 +3710,9 @@ function ViewAbdmEod({
   }, {
     l: "# Actual Delivery",
     v: eod.actualDelivery
+  }, {
+    l: "# Personal Leads",
+    v: eod.personalLeads
   }, {
     l: "AI Scans",
     v: eod.aiScanCount
@@ -4971,6 +5011,7 @@ function GMConsolidated(_ref) {
             metricCard("MTD Revenue",eo.mtdRevenue),metricCard("P90 Value",eo.p90value),
             metricCard("Handover Total",eo.handTotal),metricCard("Tool Score",Object.values(eo.tools||{}).filter(Boolean).length+"/"+TOOLS.length),
           metricCard("Delivery",eo.actualDelivery),
+          metricCard("Personal Leads",eo.personalLeads),
           metricCard("AI Scans",eo.aiScanCount),
           metricCard("xCharge Coupons",eo.xchargeCoupon),
           metricCard("Customer Envelopes",eo.customerEnvelope)
@@ -5073,6 +5114,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 
 
