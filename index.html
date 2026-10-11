@@ -25,6 +25,7 @@ var db=firebase.firestore();
 
 
 
+
 /* ── MOBILE VIEW TOGGLE ─────────────────────────────────────────── */
 var _mobileMode = window.innerWidth < 768;
 function isMob() { return _mobileMode; }
@@ -2593,7 +2594,7 @@ function BdmDashboard({
       margin: "0 auto",
       padding: "22px 16px"
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(MonthlyProgress, { memberId: uid }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
       gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr",
@@ -2932,7 +2933,7 @@ function GMDashboard({
       margin: "0 auto",
       padding: "22px 16px"
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(TeamMonthlyProgress, null), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
       gridTemplateColumns: isMob() ? "1fr 1fr" : "repeat(4,1fr)",
@@ -4138,6 +4139,236 @@ function ViewBdmEod({
 // ═══════════════════════════════════════════════
 // ABDM DASHBOARD
 // ═══════════════════════════════════════════════
+
+/* ══════════════════════════════════════════════════════════════
+   MONTHLY PROGRESS MIRROR + Q3 TARGETS
+   ══════════════════════════════════════════════════════════════ */
+
+var Q3_TARGETS = {
+  "ABDM011": { name: "Tarun",    oct: 94,  nov: 125, dec: 96,  q3: 315 },
+  "ABDM021": { name: "Anoop",    oct: 99,  nov: 132, dec: 99,  q3: 330 },
+  "AMS100":  { name: "Surya",    oct: 73,  nov: 98,  dec: 74,  q3: 245 },
+  "BDM100":  { name: "Gautam",   oct: 33,  nov: 44,  dec: 33,  q3: 110 }
+};
+
+function getMonthTarget(memberId, monthStr) {
+  var t = Q3_TARGETS[memberId];
+  if (!t) return 0;
+  var mNum = parseInt(monthStr.split("-")[1], 10);
+  if (mNum === 10) return t.oct;
+  if (mNum === 11) return t.nov;
+  if (mNum === 12) return t.dec;
+  return 0;
+}
+
+function MonthlyProgress(props) {
+  var memberId = props.memberId;
+  var compact = props.compact;
+  var s1 = React.useState({ loading: true, actual: 0, planned: 0, days: 0 });
+  var stats = s1[0]; var setStats = s1[1];
+
+  React.useEffect(function() {
+    var thisMonth = today().substring(0, 7);
+    listCol("eods").then(function(allEods) {
+      var mine = allEods.filter(function(e) {
+        return e.memberId === memberId
+          && String(e.date).indexOf(thisMonth) === 0
+          && e.eodStatus === "submitted";
+      });
+      var actualDel = 0;
+      var plannedDel = 0;
+      mine.forEach(function(e) {
+        actualDel += parseFloat(e.actualDelivery) || 0;
+      });
+      listCol("plans").then(function(allPlans) {
+        var minePlans = allPlans.filter(function(p) {
+          return p.memberId === memberId
+            && String(p.date).indexOf(thisMonth) === 0
+            && p.planStatus === "submitted";
+        });
+        minePlans.forEach(function(p) {
+          plannedDel += parseFloat(p.deliveryPlanned) || 0;
+        });
+        setStats({ loading: false, actual: actualDel, planned: plannedDel, days: mine.length });
+      });
+    });
+  }, [memberId]);
+
+  var thisMonth = today().substring(0, 7);
+  var target = getMonthTarget(memberId, thisMonth);
+  var pct = target > 0 ? Math.min(100, (stats.actual / target) * 100) : 0;
+  var pctColor = pct >= 80 ? T : pct >= 50 ? AM : P;
+  var daysInMonth = new Date(parseInt(thisMonth.split("-")[0]), parseInt(thisMonth.split("-")[1]), 0).getDate();
+  var dayOfMonth = new Date().getDate();
+  var expectedPct = (dayOfMonth / daysInMonth) * 100;
+  var paceStatus = pct >= expectedPct ? "On Track" : "Behind Pace";
+  var paceColor = pct >= expectedPct ? T : P;
+
+  if (stats.loading) {
+    return React.createElement("div", {
+      style: { padding: 14, background: "white", borderRadius: 10, marginBottom: 14, textAlign: "center", color: "#9CA3AF", fontSize: 11 }
+    }, "Loading monthly progress...");
+  }
+
+  if (target === 0) {
+    return null;
+  }
+
+  var monthName = new Date(thisMonth + "-01").toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+
+  return React.createElement("div", {
+    style: {
+      background: "linear-gradient(135deg, #FFFFFF 0%, #F0F4F8 100%)",
+      borderRadius: 12,
+      padding: compact ? 12 : 16,
+      marginBottom: 14,
+      border: "1px solid #E2E8F0",
+      boxShadow: "0 2px 8px rgba(0,0,0,.04)"
+    }
+  },
+    React.createElement("div", {
+      style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 8 }
+    },
+      React.createElement("div", null,
+        React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: .5 } }, "Monthly Delivery Progress"),
+        React.createElement("div", { style: { fontSize: 13, fontWeight: 800, color: N, marginTop: 2 } }, monthName + " • Target " + target + " units")
+      ),
+      React.createElement("div", {
+        style: { padding: "3px 10px", borderRadius: 12, background: paceColor === T ? "#D1FAE5" : "#FEE2E2", color: paceColor === T ? "#065F46" : "#991B1B", fontSize: 10, fontWeight: 800 }
+      }, paceStatus)
+    ),
+    React.createElement("div", { style: { display: "grid", gridTemplateColumns: isMob() ? "1fr 1fr" : "repeat(4, 1fr)", gap: 10, marginBottom: 12 } },
+      React.createElement("div", { style: { padding: "8px 10px", background: "white", borderRadius: 7, border: "1px solid #E2E8F0" } },
+        React.createElement("div", { style: { fontSize: 9, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" } }, "Actual Delivery"),
+        React.createElement("div", { style: { fontSize: 22, fontWeight: 900, color: pctColor } }, stats.actual)
+      ),
+      React.createElement("div", { style: { padding: "8px 10px", background: "white", borderRadius: 7, border: "1px solid #E2E8F0" } },
+        React.createElement("div", { style: { fontSize: 9, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" } }, "Monthly Target"),
+        React.createElement("div", { style: { fontSize: 22, fontWeight: 900, color: N } }, target)
+      ),
+      React.createElement("div", { style: { padding: "8px 10px", background: "white", borderRadius: 7, border: "1px solid #E2E8F0" } },
+        React.createElement("div", { style: { fontSize: 9, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" } }, "Achievement"),
+        React.createElement("div", { style: { fontSize: 22, fontWeight: 900, color: pctColor } }, Math.round(pct) + "%")
+      ),
+      React.createElement("div", { style: { padding: "8px 10px", background: "white", borderRadius: 7, border: "1px solid #E2E8F0" } },
+        React.createElement("div", { style: { fontSize: 9, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" } }, "Days Reported"),
+        React.createElement("div", { style: { fontSize: 22, fontWeight: 900, color: N } }, stats.days + "/" + dayOfMonth)
+      )
+    ),
+    React.createElement("div", { style: { height: 10, background: "#E2E8F0", borderRadius: 5, overflow: "hidden", position: "relative" } },
+      React.createElement("div", { style: { height: "100%", width: pct + "%", background: pctColor, transition: "width 0.6s" } }),
+      React.createElement("div", {
+        style: { position: "absolute", top: 0, left: expectedPct + "%", height: "100%", width: 2, background: "#374151" }
+      })
+    ),
+    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginTop: 5, fontSize: 10, color: "#6B7280" } },
+      React.createElement("span", null, "0"),
+      React.createElement("span", { style: { fontWeight: 700 } }, "Pace mark: " + Math.round(expectedPct) + "%"),
+      React.createElement("span", null, target)
+    )
+  );
+}
+/* ── END MONTHLY PROGRESS ──────────────────────────────────────── */
+
+function TeamMonthlyProgress(props) {
+  var s = React.useState({ loading: true, data: [] });
+  var state = s[0]; var setState = s[1];
+
+  React.useEffect(function() {
+    var thisMonth = today().substring(0, 7);
+    listCol("eods").then(function(allEods) {
+      var teamIds = Object.keys(Q3_TARGETS);
+      var data = teamIds.map(function(mid) {
+        var mine = allEods.filter(function(e) {
+          return e.memberId === mid
+            && String(e.date).indexOf(thisMonth) === 0
+            && e.eodStatus === "submitted";
+        });
+        var actual = 0;
+        mine.forEach(function(e) {
+          actual += parseFloat(e.actualDelivery) || 0;
+        });
+        var target = getMonthTarget(mid, thisMonth);
+        var pct = target > 0 ? Math.min(100, (actual / target) * 100) : 0;
+        return {
+          mid: mid,
+          name: (USERS[mid] && USERS[mid].name) || mid,
+          designation: (USERS[mid] && USERS[mid].designation) || "",
+          actual: actual,
+          target: target,
+          pct: pct,
+          days: mine.length
+        };
+      });
+      setState({ loading: false, data: data });
+    });
+  }, []);
+
+  var thisMonth = today().substring(0, 7);
+  var monthName = new Date(thisMonth + "-01").toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+  var totalTarget = state.data.reduce(function(s, m) { return s + m.target; }, 0);
+  var totalActual = state.data.reduce(function(s, m) { return s + m.actual; }, 0);
+  var totalPct = totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0;
+
+  if (state.loading) {
+    return React.createElement("div", {
+      style: { padding: 14, background: "white", borderRadius: 10, marginBottom: 14, textAlign: "center", color: "#9CA3AF", fontSize: 11 }
+    }, "Loading team progress...");
+  }
+
+  return React.createElement("div", {
+    style: {
+      background: "white", borderRadius: 12, padding: 16, marginBottom: 14,
+      boxShadow: "0 2px 12px rgba(0,0,0,.06)", border: "1px solid #E2E8F0"
+    }
+  },
+    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 } },
+      React.createElement("div", null,
+        React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: .5 } }, "Team Monthly Delivery Progress"),
+        React.createElement("div", { style: { fontSize: 14, fontWeight: 800, color: N, marginTop: 3 } }, monthName + " • Team Target: " + totalTarget + " units")
+      ),
+      React.createElement("div", { style: { fontSize: 22, fontWeight: 900, color: totalPct >= 80 ? T : totalPct >= 50 ? AM : P } },
+        totalActual + "/" + totalTarget + " • " + Math.round(totalPct) + "%"
+      )
+    ),
+    React.createElement("div", { style: { height: 10, background: "#E2E8F0", borderRadius: 5, overflow: "hidden", marginBottom: 14 } },
+      React.createElement("div", { style: { height: "100%", width: totalPct + "%", background: totalPct >= 80 ? T : totalPct >= 50 ? AM : P } })
+    ),
+    React.createElement("div", null,
+      state.data.map(function(m) {
+        var color = m.pct >= 80 ? T : m.pct >= 50 ? AM : P;
+        return React.createElement("div", {
+          key: m.mid,
+          style: {
+            display: "grid",
+            gridTemplateColumns: isMob() ? "1fr 1fr" : "auto 1fr auto auto",
+            gap: 10, alignItems: "center", padding: "8px 10px",
+            background: "#F7F8FC", border: "1px solid #E2E8F0", borderRadius: 7, marginBottom: 5
+          }
+        },
+          React.createElement("div", null,
+            React.createElement("div", { style: { fontSize: 12, fontWeight: 800, color: N } }, m.name),
+            React.createElement("div", { style: { fontSize: 9, color: "#9CA3AF" } }, m.designation)
+          ),
+          !isMob() && React.createElement("div", { style: { position: "relative", height: 8, background: "#E2E8F0", borderRadius: 4, overflow: "hidden", maxWidth: 300 } },
+            React.createElement("div", { style: { position: "absolute", top: 0, left: 0, height: "100%", width: m.pct + "%", background: color } })
+          ),
+          React.createElement("div", { style: { fontSize: 13, fontWeight: 800, color: N, textAlign: "right", whiteSpace: "nowrap" } },
+            m.actual + "/" + m.target
+          ),
+          React.createElement("div", { style: {
+            padding: "2px 8px", borderRadius: 10,
+            background: m.pct >= 80 ? "#D1FAE5" : m.pct >= 50 ? "#FEF3C7" : "#FEE2E2",
+            color: m.pct >= 80 ? "#065F46" : m.pct >= 50 ? "#92400E" : "#991B1B",
+            fontSize: 11, fontWeight: 800, whiteSpace: "nowrap"
+          } }, Math.round(m.pct) + "%")
+        );
+      })
+    )
+  );
+}
+
+
 function AbdmDashboard({
   user,
   uid,
@@ -4177,7 +4408,7 @@ function AbdmDashboard({
       margin: "0 auto",
       padding: "22px 16px"
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(MonthlyProgress, { memberId: uid }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
       gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr",
@@ -4747,6 +4978,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 
 
