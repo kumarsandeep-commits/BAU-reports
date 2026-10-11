@@ -28,6 +28,7 @@ var db=firebase.firestore();
 
 
 
+
 /* ── MOBILE VIEW TOGGLE ─────────────────────────────────────────── */
 var _mobileMode = window.innerWidth < 768;
 function isMob() { return _mobileMode; }
@@ -2553,6 +2554,10 @@ function BdmDashboard({
   user,
   uid,
   onLogout,
+  onPlan,
+  onEod_own,
+  onViewPlan,
+  onViewEod_own,
   onMorning,
   onEod,
   onViewMorning,
@@ -2580,6 +2585,8 @@ function BdmDashboard({
   const t = today();
   const todayBdmM = bdmM.find(r => r.date === t);
   const todayBdmE = bdmE.find(r => r.date === t);
+  const todayOwnPlan = plans.find(r => r.date === t && r.memberId === uid);
+  const todayOwnEod = eods.find(r => r.date === t && r.memberId === uid);
   return /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
@@ -2596,7 +2603,55 @@ function BdmDashboard({
       margin: "0 auto",
       padding: "22px 16px"
     }
-  }, /*#__PURE__*/React.createElement(MonthlyProgress, { memberId: uid }), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(MonthlyProgress, { memberId: uid }),
+    /*#__PURE__*/React.createElement("div", {
+      style: {fontSize:11, fontWeight:800, color:"#6B7280", textTransform:"uppercase", letterSpacing:.6, marginBottom:10, marginTop:4}
+    }, "My BAU — Daily Reporting"),
+    /*#__PURE__*/React.createElement("div", {
+      style: {display:"grid", gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr", gap:14, marginBottom:22}
+    },
+      /*#__PURE__*/React.createElement("div", {
+        style: {background:"white", borderRadius:12, padding:20, boxShadow:"0 2px 12px rgba(0,0,0,.06)", borderTop:`3px solid ${N}`}
+      },
+        /*#__PURE__*/React.createElement("div", {
+          style: {fontSize:10, fontWeight:700, color:"#6B7280", textTransform:"uppercase", letterSpacing:.5, marginBottom:6}
+        }, "My Today's Plan"),
+        /*#__PURE__*/React.createElement("div", {
+          style: {fontSize:15, fontWeight:800, color:N, marginBottom:3}
+        }, todayOwnPlan?.planStatus === "submitted" ? "✓ Submitted" : todayOwnPlan ? "Draft" : "Not filed yet"),
+        /*#__PURE__*/React.createElement("div", {
+          style: {fontSize:11, color:"#9CA3AF", marginBottom:12}
+        }, "Deadline: 11:00 AM"),
+        /*#__PURE__*/React.createElement(Btn, {
+          v: todayOwnPlan?.planStatus === "submitted" ? "ghost" : "teal",
+          sm: true,
+          onClick: () => onPlan(t)
+        }, todayOwnPlan?.planStatus === "submitted" ? "View / Edit" : todayOwnPlan ? "Continue →" : "File Plan →")
+      ),
+      /*#__PURE__*/React.createElement("div", {
+        style: {background:"white", borderRadius:12, padding:20, boxShadow:"0 2px 12px rgba(0,0,0,.06)", borderTop:`3px solid ${T}`}
+      },
+        /*#__PURE__*/React.createElement("div", {
+          style: {fontSize:10, fontWeight:700, color:"#6B7280", textTransform:"uppercase", letterSpacing:.5, marginBottom:6}
+        }, "My Today's EOD"),
+        /*#__PURE__*/React.createElement("div", {
+          style: {fontSize:15, fontWeight:800, color:N, marginBottom:3}
+        }, todayOwnEod?.eodStatus === "submitted" ? "✓ Submitted" : todayOwnEod ? "Draft" : "Not filed yet"),
+        /*#__PURE__*/React.createElement("div", {
+          style: {fontSize:11, color:"#9CA3AF", marginBottom:12}
+        }, "Deadline: 8:00 PM"),
+        /*#__PURE__*/React.createElement(Btn, {
+          v: todayOwnEod?.eodStatus === "submitted" ? "ghost" : "teal",
+          sm: true,
+          onClick: () => onEod_own(t),
+          disabled: !todayOwnPlan
+        }, todayOwnEod?.eodStatus === "submitted" ? "View / Edit" : todayOwnEod ? "Continue →" : (todayOwnPlan ? "File EOD →" : "File Plan First"))
+      )
+    ),
+    /*#__PURE__*/React.createElement("div", {
+      style: {fontSize:11, fontWeight:800, color:"#6B7280", textTransform:"uppercase", letterSpacing:.6, marginBottom:10}
+    }, "Team Management — Supervisory Review"),
+    /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
       gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr",
@@ -4760,6 +4815,10 @@ function App() {
     user: user,
     uid: uid,
     onLogout: logout,
+    onPlan: date => openAbdmPlan(uid, date),
+    onEod_own: date => openAbdmEod(uid, date),
+    onViewPlan: viewAbdmPlan,
+    onViewEod_own: viewAbdmEod,
     onMorning: date => openBdmMorning(uid, date),
     onEod: date => openBdmEod(uid, date),
     onViewMorning: viewBdmMorning,
@@ -4980,6 +5039,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 
 
