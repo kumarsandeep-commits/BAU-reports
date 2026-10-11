@@ -22,6 +22,7 @@ var db=firebase.firestore();
 
 
 
+
 /* ── MOBILE VIEW TOGGLE ─────────────────────────────────────────── */
 var _mobileMode = window.innerWidth < 768;
 function isMob() { return _mobileMode; }
@@ -67,6 +68,8 @@ function postToSheet(type, data) {
     aiScanCount: data.aiScanCount || "",
     xchargeCoupon: data.xchargeCoupon || "",
     customerEnvelope: data.customerEnvelope || "",
+    deliveryPlanned: data.deliveryPlanned || "",
+    actualDelivery: data.actualDelivery || "",
     p50: data.p50 || "",
     dnp: data.dnp || "",
     ni: data.ni || "",
@@ -251,7 +254,7 @@ function buildPrintBody(plan, eod, bdmM, bdmE) {
     b += '</div></div></div>';
     // D: Handover
     b += '<div class="sec"><div class="sh">D - LEAD HANDOVER  P50 / DNP / NI / CMB / P90 >15 Days</div><div class="sb"><div class="g5">';
-    [{l:'P50',s:'Warm',v:eod.p50},{l:'DNP',s:'Did Not Pick',v:eod.dnp},{l:'NI',s:'Declined',v:eod.ni},{l:'P90>15d',s:'Long Cycle',v:eod.p90long},{l:'TOTAL',s:'Handed Over',v:eod.handTotal}].forEach(function(st){
+    [{l:'P50',s:'Warm',v:eod.p50},{l:'DNP',s:'Did Not Pick',v:eod.dnp},{l:'NI',s:'Declined',v:eod.ni},{l:'P90>15d',s:'Long Cycle',v:eod.p90long},{l:'TOTAL',s:'To Inside Sales',v:eod.handTotal}].forEach(function(st){
       b += '<div class="mc" style="text-align:center"><div class="ml">'+st.l+'</div><div style="font-size:8px;color:#888;margin-bottom:4px">('+st.s+')</div><div class="mv">'+V(st.v)+'</div></div>';
     });
     b += '</div></div></div>';
@@ -427,6 +430,7 @@ const mkV = () => ({
 const mkPlan = () => ({
   date: today(),
   visits: [mkV()],
+  deliveryPlanned: "",
   planStatus: "draft"
 });
 const mkEod = () => ({
@@ -452,6 +456,7 @@ const mkEod = () => ({
   aiScanCount: "",
   xchargeCoupon: "",
   customerEnvelope: "",
+  actualDelivery: "",
   eodStatus: "draft"
 });
 const mkAbdmReview = () => MEMBER_IDS.map(mid => ({
@@ -1430,11 +1435,25 @@ function PlanForm({
       fontSize: 13,
       cursor: "pointer"
     }
-  }, "＋ Add Visit (", plan.visits.length, "/", MAX_VISITS, ")")), /*#__PURE__*/React.createElement("div", {
+  }, "＋ Add Visit (", plan.visits.length, "/", MAX_VISITS, ")")), /*#__PURE__*/React.createElement(Card, {
+    code: "B",
+    title: "Delivery Target",
+    sub: "Vehicle deliveries planned for today",
+    color: T
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {display:"grid", gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr", gap:"0 14px"}
+  }, /*#__PURE__*/React.createElement(Inp, {
+    label: "# Delivery Planned for Today",
+    value: plan.deliveryPlanned,
+    onChange: val => setPlan(p => ({...p, deliveryPlanned: val})),
+    ph: "e.g. 2",
+    hint: "Number of combo units expected to be delivered today"
+  }))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       justifyContent: "flex-end",
-      paddingBottom: 24
+      paddingBottom: 24,
+      marginTop: 14
     }
   }, /*#__PURE__*/React.createElement(Btn, {
     v: "teal",
@@ -1489,7 +1508,7 @@ function EodForm({
         date: planData?.date || eod.date,
         eodStatus: submit ? "submitted" : "draft"
       });
-      if (submit) postToSheet("eod", {..._savedEod, visits: planData?.visits || []});
+      if (submit) postToSheet("eod", {..._savedEod, visits: planData?.visits || [], deliveryPlanned: planData?.deliveryPlanned || ""});
       showT(submit ? "✓ EOD submitted!" : "Draft saved.");
       if (submit) setTimeout(onDone, 800);
     } catch (e) {
@@ -1520,7 +1539,7 @@ function EodForm({
   }, {
     k: "handTotal",
     l: "TOTAL",
-    s: "Handed Over",
+    s: "To Inside Sales",
     b: true
   }];
   return /*#__PURE__*/React.createElement("div", {
@@ -1735,7 +1754,7 @@ function EodForm({
     label: "Trainings Conducted",
     value: eod.trainings,
     onChange: v => upd("trainings", v),
-    hint: "Sessions held today"
+    hint: "CLT + S&T Sessions held today"
   }), /*#__PURE__*/React.createElement(Inp, {
     label: "Total Leads Generated Today",
     value: eod.totalLeads,
@@ -1772,6 +1791,12 @@ function EodForm({
     onChange: v => upd("mtdRevenue", v),
     hint: "Running total · ₹21,000/day"
   })),
+  /*#__PURE__*/React.createElement(Inp, {
+    label: "# Actual Delivery Today",
+    value: eod.actualDelivery,
+    onChange: function(v){return upd("actualDelivery",v);},
+    hint: "Number of combo units actually delivered today"
+  }),
   /*#__PURE__*/React.createElement(Inp, {
     label: "Number of AI Scans",
     value: eod.aiScanCount,
@@ -3341,7 +3366,18 @@ function ViewAbdmPlan({
       fontSize: 12,
       color: c ? N : "#CBD5E1"
     }
-  }, c || "\u2014"))))))))));
+  }, c || "\u2014")))))))), plan.deliveryPlanned ? /*#__PURE__*/React.createElement(Card, {
+    code: "B",
+    title: "Delivery Target",
+    sub: "Vehicle deliveries planned for today",
+    color: T
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {padding:"12px 16px",background:"#F0FDFA",borderRadius:8,border:"1px solid #99F6E4"}
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {fontSize:11,fontWeight:700,color:"#6B7280",textTransform:"uppercase",marginBottom:4}
+  }, "# Delivery Planned"), /*#__PURE__*/React.createElement("div", {
+    style: {fontSize:28,fontWeight:900,color:T}
+  }, plan.deliveryPlanned))) : null)));
 }
 function ViewAbdmEod({
   user,
@@ -3379,7 +3415,7 @@ function ViewAbdmEod({
     v: eod.p90long
   }, {
     l: "TOTAL",
-    s: "Handed Over",
+    s: "To Inside Sales",
     v: eod.handTotal,
     b: true
   }];
@@ -3551,6 +3587,9 @@ function ViewAbdmEod({
   }, {
     l: "MTD Revenue",
     v: eod.mtdRevenue
+  }, {
+    l: "# Actual Delivery",
+    v: eod.actualDelivery
   }, {
     l: "AI Scans",
     v: eod.aiScanCount
@@ -4613,7 +4652,8 @@ function GMConsolidated(_ref) {
             metricCard("Trainings",eo.trainings),metricCard("Total Leads",eo.totalLeads),
             metricCard("Lead Quality %",eo.leadQuality),metricCard("P90 Today/Active",eo.p90today),
             metricCard("MTD Revenue",eo.mtdRevenue),metricCard("P90 Value",eo.p90value),
-            metricCard("Handover Total",eo.handTotal),metricCard("Tool Score",Object.values(eo.tools||{}).filter(Boolean).length+"/7"),
+            metricCard("Handover Total",eo.handTotal),metricCard("Tool Score",Object.values(eo.tools||{}).filter(Boolean).length+"/"+TOOLS.length),
+          metricCard("Delivery",eo.actualDelivery),
           metricCard("AI Scans",eo.aiScanCount),
           metricCard("xCharge Coupons",eo.xchargeCoupon),
           metricCard("Customer Envelopes",eo.customerEnvelope)
@@ -4716,6 +4756,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 
 
