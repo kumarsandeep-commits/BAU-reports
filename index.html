@@ -29,6 +29,7 @@ var db=firebase.firestore();
 
 
 
+
 /* ── MOBILE VIEW TOGGLE ─────────────────────────────────────────── */
 var _mobileMode = window.innerWidth < 768;
 function isMob() { return _mobileMode; }
@@ -378,8 +379,41 @@ const BDM_IDS = Object.keys(USERS).filter(k => USERS[k].role === "bdm");
 const today = () => new Date().toISOString().split("T")[0];
 
 // ── DATA CONSTANTS ──────────────────────────────
-const TATA_D = ["Tata.ev S-14, Gurgaon", "Tata.ev S-47, Gurgaon", "Sagar Sec 63, Noida", "Sagar Sec 5, Noida", "Sagar Gaur City, Noida", "Frontier Dwarka S-20", "Jasper Safdarjung", "Cherish Rohini", "Autovikas Wazirpur", "Sagar Greater Noida", "Sagar Patparganj", "Sagar Dilshad Garden"];
-const NT_D = ["BYD Moti Nagar", "Koncept Sec-2, Noida"];
+const TATA_D = ["Tata.ev Sector 14, Gurgaon", "Tata.ev Sector 47, Gurgaon", "Tata Zedex Model Town, Delhi", "Tata Zedex Karol Bagh, Delhi"];
+const NT_D = [
+  "Frontier Dwarka Sec 20, Delhi",
+  "Frontier Dwarka Sec 5, Delhi",
+  "Delight Motor Janakpuri, Delhi",
+  "Sagar Motors Noida Sec 63",
+  "Sagar Motors Noida Sec 5",
+  "Sagar Motors Gaur City, Noida",
+  "Sagar Motors Greater Noida",
+  "Sagar Motors Noida Sec 140",
+  "Sagar Patparganj, Delhi",
+  "Sagar Dilshad Garden, Delhi",
+  "DPS Motors Preet Vihar, Delhi",
+  "DPS Mayapuri, Delhi",
+  "DPS Peeragarhi, Delhi",
+  "DPS Kashmere Gate, Delhi",
+  "Sab Motors Ghaziabad",
+  "Sab Motors Patel Nagar, Ghaziabad",
+  "Sab Motors Gokul Puri, Delhi",
+  "Sab Motors Lajpat Nagar, Delhi",
+  "Sab Motors - Mathura Road, Delhi",
+  "Jasper Safdarjung, Delhi",
+  "Jasper Nehru Place, Delhi",
+  "Jasper Malviya Nagar, Delhi",
+  "Multitech Faridabad",
+  "Autovikas Faridabad",
+  "Autovikas Moti Nagar, Delhi",
+  "Autovikas Wazirpur, Delhi",
+  "Magan Faridabad",
+  "Cherish Rohini, Delhi",
+  "Cherish Punjabi Bagh, Delhi",
+  "Malwa Motors Prashant Vihar, Delhi",
+  "BYD Moti Nagar",
+  "Koncept Sec-2, Noida"
+];
 const ALL_D = ["", ...TATA_D, ...NT_D, "Other"];
 const PURPOSES = ["", "Training", "Meeting", "Objection Handling", "Feedback Collection", "Incentive Disbursement", "Lead Review", "Other"];
 const DESIG = ["", "GM", "SM", "TL", "CA", "Other"];
@@ -5039,6 +5073,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 
 
