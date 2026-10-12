@@ -31,6 +31,7 @@ var db=firebase.firestore();
 
 
 
+
 /* ── MOBILE VIEW TOGGLE ─────────────────────────────────────────── */
 var _mobileMode = window.innerWidth < 768;
 function isMob() { return _mobileMode; }
@@ -500,6 +501,7 @@ const mkEod = () => ({
   customerEnvelope: "",
   actualDelivery: "",
   personalLeads: "",
+  p90Leads: [],
   eodStatus: "draft"
 });
 const mkAbdmReview = () => MEMBER_IDS.map(mid => ({
@@ -1508,6 +1510,130 @@ function PlanForm({
 // ═══════════════════════════════════════════════
 // ABDM: EOD FORM
 // ═══════════════════════════════════════════════
+
+/* ══════════════════════════════════════════════════════════════
+   P90 LEAD LOG - Individual lead tracking
+   ══════════════════════════════════════════════════════════════ */
+
+var P90_STATUSES = ["New P90", "Progressing", "Hot", "Stalled", "Converted", "Lost"];
+
+function P90LeadLog(props) {
+  var leads = props.leads || [];
+  var onChange = props.onChange;
+
+  var addLead = function() {
+    onChange([...leads, { customer: "", dealership: "", status: "New P90", days: "", remark: "" }]);
+  };
+
+  var updateLead = function(i, field, val) {
+    var copy = leads.slice();
+    copy[i] = { ...copy[i], [field]: val };
+    onChange(copy);
+  };
+
+  var removeLead = function(i) {
+    onChange(leads.filter(function(_, idx) { return idx !== i; }));
+  };
+
+  var statusColor = function(s) {
+    if (s === "Hot") return "#F3688D";
+    if (s === "Converted") return "#00B5AD";
+    if (s === "Progressing") return "#00B5AD";
+    if (s === "Stalled") return "#F59E0B";
+    if (s === "Lost") return "#9CA3AF";
+    return "#222E53";
+  };
+
+  return React.createElement(Card, {
+    code: "F",
+    title: "P90 Lead Log",
+    sub: "Track each P90 lead individually with current status",
+    color: T
+  },
+    React.createElement("div", {
+      style: {marginBottom: 12, fontSize: 11, color: "#6B7280", fontStyle: "italic"}
+    }, "Log each P90 lead you are personally tracking. GM can see all active P90 pipeline across the team."),
+
+    leads.length === 0 && React.createElement("div", {
+      style: {padding: "16px", textAlign: "center", background: "#F7F8FC", borderRadius: 8, border: "1px dashed #CBD5E1", color: "#9CA3AF", fontSize: 12, marginBottom: 10}
+    }, "No P90 leads logged yet. Click '+ Add P90 Lead' to log the first one."),
+
+    leads.map(function(ld, i) {
+      return React.createElement("div", {
+        key: i,
+        style: {padding: 12, background: "#FAFBFC", border: "1px solid #E2E8F0", borderRadius: 8, marginBottom: 8}
+      },
+        React.createElement("div", {
+          style: {display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8}
+        },
+          React.createElement("div", {
+            style: {fontSize: 11, fontWeight: 800, color: T, letterSpacing: .5}
+          }, "P90 LEAD #" + (i + 1)),
+          React.createElement("button", {
+            onClick: function() { removeLead(i); },
+            style: {padding: "3px 8px", background: "transparent", color: "#F3688D", border: "1px solid #F3688D", borderRadius: 4, fontSize: 10, fontWeight: 700, cursor: "pointer"}
+          }, "\u00D7 Remove")
+        ),
+        React.createElement("div", {
+          style: {display: "grid", gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr", gap: "0 12px"}
+        },
+          React.createElement(Inp, {
+            label: "Customer Name",
+            value: ld.customer,
+            onChange: function(v) { updateLead(i, "customer", v); },
+            ph: "e.g. Rajesh Kumar"
+          }),
+          React.createElement("div", {style: {marginBottom: 11}},
+            React.createElement("label", {style: {display: "block", fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: .4, marginBottom: 4}}, "Dealership"),
+            React.createElement("select", {
+              value: ld.dealership,
+              onChange: function(e) { updateLead(i, "dealership", e.target.value); },
+              style: {width: "100%", padding: "7px 9px", border: "1.5px solid #CBD5E1", borderRadius: 6, fontSize: 12, outline: "none", background: "white"}
+            },
+              React.createElement("option", {value: ""}, "\u2014 Select \u2014"),
+              ALL_D.filter(function(d) { return d; }).map(function(d) {
+                return React.createElement("option", {key: d, value: d}, d);
+              })
+            )
+          ),
+          React.createElement("div", {style: {marginBottom: 11}},
+            React.createElement("label", {style: {display: "block", fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: .4, marginBottom: 4}}, "Status"),
+            React.createElement("select", {
+              value: ld.status,
+              onChange: function(e) { updateLead(i, "status", e.target.value); },
+              style: {width: "100%", padding: "7px 9px", border: "1.5px solid " + statusColor(ld.status), borderRadius: 6, fontSize: 12, outline: "none", background: "white", fontWeight: 700, color: statusColor(ld.status)}
+            },
+              P90_STATUSES.map(function(s) {
+                return React.createElement("option", {key: s, value: s}, s);
+              })
+            )
+          ),
+          React.createElement(Inp, {
+            label: "Days in P90",
+            value: ld.days,
+            onChange: function(v) { updateLead(i, "days", v); },
+            ph: "e.g. 7",
+            hint: "Days since lead entered P90 stage"
+          })
+        ),
+        React.createElement(Txt, {
+          label: "Current Status / Remark",
+          value: ld.remark,
+          onChange: function(v) { updateLead(i, "remark", v); },
+          rows: 2,
+          hint: "e.g. Test drive scheduled Mon / Awaiting bank approval / Customer visiting dealership this weekend"
+        })
+      );
+    }),
+
+    React.createElement("button", {
+      onClick: addLead,
+      style: {width: "100%", padding: "10px", background: "transparent", color: T, border: "1.5px dashed " + T, borderRadius: 7, fontSize: 12, fontWeight: 800, cursor: "pointer", marginTop: 4}
+    }, "+ Add P90 Lead")
+  );
+}
+/* ── END P90 LEAD LOG ──────────────────────────────────────────── */
+
 function EodForm({
   userId,
   user,
@@ -1930,7 +2056,7 @@ function EodForm({
     onChange: v => upd("escalation", v),
     rows: 2,
     hint: "Requires Manager attention"
-  }))), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement(P90LeadLog, {leads: eod.p90Leads || [], onChange: function(arr) { upd("p90Leads", arr); }})), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       justifyContent: "space-between",
@@ -2980,6 +3106,114 @@ function BdmDashboard({
 // ═══════════════════════════════════════════════
 // GM CONSOLIDATED DASHBOARD
 // ═══════════════════════════════════════════════
+
+/* ══════════════════════════════════════════════════════════════
+   TEAM P90 LEAD LOG - GM aggregated view
+   ══════════════════════════════════════════════════════════════ */
+
+function TeamP90Log(props) {
+  var eods = props.eods || [];
+  var s = React.useState("all");
+  var filter = s[0]; var setFilter = s[1];
+
+  // Collect all P90 leads from all EODs (latest per ABDM per date)
+  // Use only the most recent EOD per member for current snapshot
+  var latestByMember = {};
+  eods.forEach(function(e) {
+    if (e.eodStatus !== "submitted") return;
+    if (!e.p90Leads || e.p90Leads.length === 0) return;
+    var key = e.memberId;
+    if (!latestByMember[key] || String(e.date) > String(latestByMember[key].date)) {
+      latestByMember[key] = e;
+    }
+  });
+
+  var allLeads = [];
+  Object.values(latestByMember).forEach(function(e) {
+    (e.p90Leads || []).forEach(function(ld, i) {
+      if (!ld.customer) return;
+      allLeads.push({
+        ...ld,
+        member: e.memberName,
+        memberId: e.memberId,
+        reportDate: e.date,
+        idx: i
+      });
+    });
+  });
+
+  var filtered = filter === "all" ? allLeads : allLeads.filter(function(l) { return l.status === filter; });
+
+  var statusCounts = {};
+  P90_STATUSES.forEach(function(s) { statusCounts[s] = 0; });
+  allLeads.forEach(function(l) { if (statusCounts[l.status] !== undefined) statusCounts[l.status]++; });
+
+  var statusColor = function(s) {
+    if (s === "Hot") return "#F3688D";
+    if (s === "Converted") return "#00B5AD";
+    if (s === "Progressing") return "#00B5AD";
+    if (s === "Stalled") return "#F59E0B";
+    if (s === "Lost") return "#9CA3AF";
+    return "#222E53";
+  };
+
+  if (allLeads.length === 0) {
+    return React.createElement("div", {
+      style: {background: "white", borderRadius: 12, padding: 20, marginBottom: 14, boxShadow: "0 2px 12px rgba(0,0,0,.06)", textAlign: "center", color: "#9CA3AF", fontSize: 12}
+    }, "No P90 leads logged yet. Team will see this grow as ABDMs log their P90 pipeline.");
+  }
+
+  return React.createElement("div", {
+    style: {background: "white", borderRadius: 12, padding: 16, marginBottom: 14, boxShadow: "0 2px 12px rgba(0,0,0,.06)"}
+  },
+    React.createElement("div", {style: {display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10}},
+      React.createElement("div", null,
+        React.createElement("div", {style: {fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: .5}}, "Team P90 Lead Pipeline"),
+        React.createElement("div", {style: {fontSize: 14, fontWeight: 800, color: "#222E53", marginTop: 3}}, allLeads.length + " active P90 leads across team")
+      )
+    ),
+    React.createElement("div", {style: {display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap"}},
+      ["all"].concat(P90_STATUSES).map(function(s) {
+        var isActive = filter === s;
+        var count = s === "all" ? allLeads.length : (statusCounts[s] || 0);
+        return React.createElement("button", {
+          key: s,
+          onClick: function() { setFilter(s); },
+          style: {
+            padding: "5px 11px", fontSize: 11, fontWeight: 700,
+            border: "1.5px solid " + (isActive ? (s === "all" ? "#222E53" : statusColor(s)) : "#E2E8F0"),
+            background: isActive ? (s === "all" ? "#222E53" : statusColor(s)) : "white",
+            color: isActive ? "white" : (s === "all" ? "#222E53" : statusColor(s)),
+            borderRadius: 14, cursor: "pointer"
+          }
+        }, (s === "all" ? "All" : s) + " (" + count + ")");
+      })
+    ),
+    React.createElement("div", {style: {maxHeight: 400, overflowY: "auto"}},
+      filtered.map(function(l, i) {
+        return React.createElement("div", {
+          key: i,
+          style: {padding: "10px 12px", background: "#FAFBFC", border: "1px solid #E2E8F0", borderLeft: "3px solid " + statusColor(l.status), borderRadius: 7, marginBottom: 6}
+        },
+          React.createElement("div", {style: {display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4, flexWrap: "wrap", gap: 6}},
+            React.createElement("div", null,
+              React.createElement("span", {style: {fontSize: 13, fontWeight: 800, color: "#222E53"}}, l.customer),
+              React.createElement("span", {style: {fontSize: 10, color: "#9CA3AF", marginLeft: 8}}, l.dealership),
+              l.days && React.createElement("span", {style: {fontSize: 10, color: "#6B7280", marginLeft: 8, fontWeight: 700}}, l.days + " days")
+            ),
+            React.createElement("span", {
+              style: {padding: "2px 8px", background: statusColor(l.status) + "22", color: statusColor(l.status), borderRadius: 10, fontSize: 10, fontWeight: 800, whiteSpace: "nowrap"}
+            }, l.status)
+          ),
+          l.remark && React.createElement("div", {style: {fontSize: 11, color: "#374151", fontStyle: "italic", marginTop: 4}}, "\u201C" + l.remark + "\u201D"),
+          React.createElement("div", {style: {fontSize: 9, color: "#9CA3AF", marginTop: 3}}, "By " + l.member + " \u2022 " + l.reportDate)
+        );
+      })
+    )
+  );
+}
+/* ── END TEAM P90 LEAD LOG ─────────────────────────────────────── */
+
 function GMDashboard({
   user,
   uid,
@@ -3033,7 +3267,7 @@ function GMDashboard({
       margin: "0 auto",
       padding: "22px 16px"
     }
-  }, /*#__PURE__*/React.createElement(TeamMonthlyProgress, null), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(TeamMonthlyProgress, null), /*#__PURE__*/React.createElement(TeamP90Log, {eods: eods}), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
       gridTemplateColumns: isMob() ? "1fr 1fr" : "repeat(4,1fr)",
@@ -5114,6 +5348,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 
 
