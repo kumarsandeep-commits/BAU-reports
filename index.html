@@ -32,6 +32,7 @@ var db=firebase.firestore();
 
 
 
+
 /* ── MOBILE VIEW TOGGLE ─────────────────────────────────────────── */
 var _mobileMode = window.innerWidth < 768;
 function isMob() { return _mobileMode; }
@@ -80,6 +81,10 @@ function postToSheet(type, data) {
     deliveryPlanned: data.deliveryPlanned || "",
     actualDelivery: data.actualDelivery || "",
     personalLeads: data.personalLeads || "",
+    enrollSuccess33: data.enrollSuccess33 || "",
+    enrollSuccess72: data.enrollSuccess72 || "",
+    enrollExperience: data.enrollExperience || "",
+    enrollOther: data.enrollOther || "",
     p50: data.p50 || "",
     dnp: data.dnp || "",
     ni: data.ni || "",
@@ -501,6 +506,10 @@ const mkEod = () => ({
   customerEnvelope: "",
   actualDelivery: "",
   personalLeads: "",
+  enrollSuccess33: "",
+  enrollSuccess72: "",
+  enrollExperience: "",
+  enrollOther: "",
   p90Leads: [],
   eodStatus: "draft"
 });
@@ -1482,17 +1491,17 @@ function PlanForm({
     }
   }, "＋ Add Visit (", plan.visits.length, "/", MAX_VISITS, ")")), /*#__PURE__*/React.createElement(Card, {
     code: "B",
-    title: "Delivery Target",
-    sub: "Vehicle deliveries planned for today",
+    title: "Dealership Delivery Forecast",
+    sub: "How many deliveries the dealership expects today",
     color: T
   }, /*#__PURE__*/React.createElement("div", {
     style: {display:"grid", gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr", gap:"0 14px"}
   }, /*#__PURE__*/React.createElement(Inp, {
-    label: "# Delivery Planned for Today",
+    label: "# Dealership Delivery Forecast (Today)",
     value: plan.deliveryPlanned,
     onChange: val => setPlan(p => ({...p, deliveryPlanned: val})),
     ph: "e.g. 2",
-    hint: "Number of combo units expected to be delivered today"
+    hint: "Dealership metric - not team target"
   }))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -1964,7 +1973,7 @@ function EodForm({
     label: "# Actual Delivery Today",
     value: eod.actualDelivery,
     onChange: function(v){return upd("actualDelivery",v);},
-    hint: "Number of combo units actually delivered today"
+    hint: "Dealership metric - from the forecast, how many were actually delivered"
   }),
   /*#__PURE__*/React.createElement(Inp, {
     label: "# Personally Attended Leads",
@@ -1972,6 +1981,45 @@ function EodForm({
     onChange: function(v){return upd("personalLeads",v);},
     hint: "Leads you personally handled at the dealership today"
   }),
+  /*#__PURE__*/React.createElement("div", {
+    style: {gridColumn:"1 / -1", background:"#F0FDFA", borderRadius:8, padding:14, marginBottom:12, border:"1.5px solid #99F6E4"}
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {fontSize:11, fontWeight:800, color:"#00B5AD", textTransform:"uppercase", letterSpacing:.5, marginBottom:4}
+  }, "Subscription Plan Enrollments (counts toward monthly target)"),
+  /*#__PURE__*/React.createElement("div", {
+    style: {fontSize:10, color:"#6B7280", marginBottom:12, fontStyle:"italic"}
+  }, "Fill the counts for plan types enrolled today. Sum of these = your daily enrollment achievement."),
+  /*#__PURE__*/React.createElement("div", {
+    style: {display:"grid", gridTemplateColumns: isMob() ? "1fr 1fr" : "repeat(4, 1fr)", gap:"0 12px"}
+  }, /*#__PURE__*/React.createElement(Inp, {
+    label: "# Success 3.3",
+    value: eod.enrollSuccess33,
+    onChange: function(v){return upd("enrollSuccess33",v);},
+    hint: "Tata subscription plan"
+  }), /*#__PURE__*/React.createElement(Inp, {
+    label: "# Success 7.2",
+    value: eod.enrollSuccess72,
+    onChange: function(v){return upd("enrollSuccess72",v);},
+    hint: "Tata subscription plan"
+  }), /*#__PURE__*/React.createElement(Inp, {
+    label: "# Experience Plan",
+    value: eod.enrollExperience,
+    onChange: function(v){return upd("enrollExperience",v);},
+    hint: "Tata experience plan"
+  }), /*#__PURE__*/React.createElement(Inp, {
+    label: "# Other (Non-Tata)",
+    value: eod.enrollOther,
+    onChange: function(v){return upd("enrollOther",v);},
+    hint: "Non-Tata plans"
+  })),
+  /*#__PURE__*/React.createElement("div", {
+    style: {marginTop:8, padding:"8px 12px", background:"white", borderRadius:6, display:"flex", justifyContent:"space-between", alignItems:"center", border:"1px solid #99F6E4"}
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {fontSize:11, fontWeight:700, color:"#6B7280", textTransform:"uppercase"}
+  }, "Total Enrollments Today"),
+  /*#__PURE__*/React.createElement("span", {
+    style: {fontSize:20, fontWeight:900, color:"#00B5AD"}
+  }, ((parseFloat(eod.enrollSuccess33)||0) + (parseFloat(eod.enrollSuccess72)||0) + (parseFloat(eod.enrollExperience)||0) + (parseFloat(eod.enrollOther)||0))))),
   /*#__PURE__*/React.createElement(Inp, {
     label: "Number of AI Scans",
     value: eod.aiScanCount,
@@ -3283,13 +3331,21 @@ function GMDashboard({
     v: `${te.filter(r => r.eodStatus === "submitted").length}/${MEMBER_IDS.length}`,
     c: T
   }, {
-    l: "Delivery Planned",
+    l: "Today's Enrollments",
+    v: te.reduce((s,r) => s + sumEnrollments(r), 0),
+    c: T
+  }, {
+    l: "Today's Sales (₹)",
+    v: te.reduce((s,r) => s + (parseFloat(r.mtdRevenue)||0), 0).toLocaleString("en-IN"),
+    c: AM
+  }, {
+    l: "Dealership Forecast",
     v: tp.reduce((s,r) => s + (parseFloat(r.deliveryPlanned)||0), 0),
     c: N
   }, {
-    l: "Actual Delivery",
+    l: "Dealership Delivered",
     v: te.reduce((s,r) => s + (parseFloat(r.actualDelivery)||0), 0),
-    c: T
+    c: N
   }, {
     l: "Leads Punched",
     v: te.reduce((s,r) => s + (parseFloat(r.totalLeads)||0), 0),
@@ -3306,10 +3362,6 @@ function GMDashboard({
     l: "xCharge Coupons",
     v: te.reduce((s,r) => s + (parseFloat(r.xchargeCoupon)||0), 0),
     c: T
-  }, {
-    l: "Daily Sales (₹)",
-    v: te.reduce((s,r) => s + (parseFloat(r.mtdRevenue)||0), 0).toLocaleString("en-IN"),
-    c: AM
   }, {
     l: "Morning Review",
     v: tbm.some(r => r.morningStatus === "submitted") ? "✓ Done" : "Pending",
@@ -4506,7 +4558,7 @@ function ViewBdmEod({
 // ═══════════════════════════════════════════════
 
 /* ══════════════════════════════════════════════════════════════
-   MONTHLY PROGRESS MIRROR + Q3 TARGETS
+   MONTHLY PROGRESS MIRROR + Q3 TARGETS (ENROLLMENT-BASED)
    ══════════════════════════════════════════════════════════════ */
 
 var Q3_TARGETS = {
@@ -4515,6 +4567,8 @@ var Q3_TARGETS = {
   "AMS100":  { name: "Surya",            oct: 73,  nov: 98,  dec: 74,  q3: 245 },
   "SA100":   { name: "Sales Associate",  oct: 33,  nov: 44,  dec: 33,  q3: 110 }
 };
+
+var WORKING_DAYS_PER_MONTH = 26;
 
 function getMonthTarget(memberId, monthStr) {
   var t = Q3_TARGETS[memberId];
@@ -4526,10 +4580,35 @@ function getMonthTarget(memberId, monthStr) {
   return 0;
 }
 
+// Sum enrollments from an EOD record (4 fields + legacy enrollForms)
+function sumEnrollments(e) {
+  var s33 = parseFloat(e.enrollSuccess33) || 0;
+  var s72 = parseFloat(e.enrollSuccess72) || 0;
+  var exp = parseFloat(e.enrollExperience) || 0;
+  var oth = parseFloat(e.enrollOther) || 0;
+  var newTotal = s33 + s72 + exp + oth;
+  // If no new-format data, fall back to legacy enrollForms
+  if (newTotal === 0 && e.enrollForms) {
+    return parseFloat(e.enrollForms) || 0;
+  }
+  return newTotal;
+}
+
+// Calculate working day of month (approximate - excludes weekends)
+function workingDayOfMonth() {
+  var d = new Date();
+  var yr = d.getFullYear(), mo = d.getMonth(), day = d.getDate();
+  var count = 0;
+  for (var i = 1; i <= day; i++) {
+    var dow = new Date(yr, mo, i).getDay();
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return count;
+}
+
 function MonthlyProgress(props) {
   var memberId = props.memberId;
-  var compact = props.compact;
-  var s1 = React.useState({ loading: true, actual: 0, planned: 0, days: 0 });
+  var s1 = React.useState({ loading: true, enrollMtd: 0, revenueMtd: 0, days: 0 });
   var stats = s1[0]; var setStats = s1[1];
 
   React.useEffect(function() {
@@ -4540,32 +4619,24 @@ function MonthlyProgress(props) {
           && String(e.date).indexOf(thisMonth) === 0
           && e.eodStatus === "submitted";
       });
-      var actualDel = 0;
-      var plannedDel = 0;
+      var enrollMtd = 0;
+      var revenueMtd = 0;
       mine.forEach(function(e) {
-        actualDel += parseFloat(e.actualDelivery) || 0;
+        enrollMtd += sumEnrollments(e);
+        revenueMtd += parseFloat(e.mtdRevenue) || 0;
       });
-      listCol("plans").then(function(allPlans) {
-        var minePlans = allPlans.filter(function(p) {
-          return p.memberId === memberId
-            && String(p.date).indexOf(thisMonth) === 0
-            && p.planStatus === "submitted";
-        });
-        minePlans.forEach(function(p) {
-          plannedDel += parseFloat(p.deliveryPlanned) || 0;
-        });
-        setStats({ loading: false, actual: actualDel, planned: plannedDel, days: mine.length });
-      });
+      setStats({ loading: false, enrollMtd: enrollMtd, revenueMtd: revenueMtd, days: mine.length });
     });
   }, [memberId]);
 
   var thisMonth = today().substring(0, 7);
   var target = getMonthTarget(memberId, thisMonth);
-  var pct = target > 0 ? Math.min(100, (stats.actual / target) * 100) : 0;
+  var pct = target > 0 ? Math.min(100, (stats.enrollMtd / target) * 100) : 0;
   var pctColor = pct >= 80 ? T : pct >= 50 ? AM : P;
-  var daysInMonth = new Date(parseInt(thisMonth.split("-")[0]), parseInt(thisMonth.split("-")[1]), 0).getDate();
-  var dayOfMonth = new Date().getDate();
-  var expectedPct = (dayOfMonth / daysInMonth) * 100;
+
+  // Pace mark based on 26 working days per month
+  var workDay = workingDayOfMonth();
+  var expectedPct = Math.min(100, (workDay / WORKING_DAYS_PER_MONTH) * 100);
   var paceStatus = pct >= expectedPct ? "On Track" : "Behind Pace";
   var paceColor = pct >= expectedPct ? T : P;
 
@@ -4575,37 +4646,35 @@ function MonthlyProgress(props) {
     }, "Loading monthly progress...");
   }
 
-  if (target === 0) {
-    return null;
-  }
+  if (target === 0) return null;
 
   var monthName = new Date(thisMonth + "-01").toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+  var revenueFmt = stats.revenueMtd >= 100000
+    ? "\u20B9" + (stats.revenueMtd/100000).toFixed(1) + "L"
+    : "\u20B9" + stats.revenueMtd.toLocaleString("en-IN");
 
   return React.createElement("div", {
     style: {
       background: "linear-gradient(135deg, #FFFFFF 0%, #F0F4F8 100%)",
-      borderRadius: 12,
-      padding: compact ? 12 : 16,
-      marginBottom: 14,
-      border: "1px solid #E2E8F0",
-      boxShadow: "0 2px 8px rgba(0,0,0,.04)"
+      borderRadius: 12, padding: 16, marginBottom: 14,
+      border: "1px solid #E2E8F0", boxShadow: "0 2px 8px rgba(0,0,0,.04)"
     }
   },
     React.createElement("div", {
       style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 8 }
     },
       React.createElement("div", null,
-        React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: .5 } }, "Monthly Delivery Progress"),
-        React.createElement("div", { style: { fontSize: 13, fontWeight: 800, color: N, marginTop: 2 } }, monthName + " • Target " + target + " units")
+        React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: .5 } }, "Monthly Enrollment Progress"),
+        React.createElement("div", { style: { fontSize: 13, fontWeight: 800, color: N, marginTop: 2 } }, monthName + " \u2022 Target " + target + " enrollments")
       ),
       React.createElement("div", {
         style: { padding: "3px 10px", borderRadius: 12, background: paceColor === T ? "#D1FAE5" : "#FEE2E2", color: paceColor === T ? "#065F46" : "#991B1B", fontSize: 10, fontWeight: 800 }
       }, paceStatus)
     ),
-    React.createElement("div", { style: { display: "grid", gridTemplateColumns: isMob() ? "1fr 1fr" : "repeat(4, 1fr)", gap: 10, marginBottom: 12 } },
+    React.createElement("div", { style: { display: "grid", gridTemplateColumns: isMob() ? "1fr 1fr" : "repeat(5, 1fr)", gap: 10, marginBottom: 12 } },
       React.createElement("div", { style: { padding: "8px 10px", background: "white", borderRadius: 7, border: "1px solid #E2E8F0" } },
-        React.createElement("div", { style: { fontSize: 9, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" } }, "Actual Delivery"),
-        React.createElement("div", { style: { fontSize: 22, fontWeight: 900, color: pctColor } }, stats.actual)
+        React.createElement("div", { style: { fontSize: 9, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" } }, "Enrollments MTD"),
+        React.createElement("div", { style: { fontSize: 22, fontWeight: 900, color: pctColor } }, stats.enrollMtd)
       ),
       React.createElement("div", { style: { padding: "8px 10px", background: "white", borderRadius: 7, border: "1px solid #E2E8F0" } },
         React.createElement("div", { style: { fontSize: 9, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" } }, "Monthly Target"),
@@ -4616,8 +4685,12 @@ function MonthlyProgress(props) {
         React.createElement("div", { style: { fontSize: 22, fontWeight: 900, color: pctColor } }, Math.round(pct) + "%")
       ),
       React.createElement("div", { style: { padding: "8px 10px", background: "white", borderRadius: 7, border: "1px solid #E2E8F0" } },
+        React.createElement("div", { style: { fontSize: 9, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" } }, "MTD Revenue"),
+        React.createElement("div", { style: { fontSize: 18, fontWeight: 900, color: T } }, revenueFmt)
+      ),
+      React.createElement("div", { style: { padding: "8px 10px", background: "white", borderRadius: 7, border: "1px solid #E2E8F0" } },
         React.createElement("div", { style: { fontSize: 9, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" } }, "Days Reported"),
-        React.createElement("div", { style: { fontSize: 22, fontWeight: 900, color: N } }, stats.days + "/" + dayOfMonth)
+        React.createElement("div", { style: { fontSize: 22, fontWeight: 900, color: N } }, stats.days + "/" + workDay)
       )
     ),
     React.createElement("div", { style: { height: 10, background: "#E2E8F0", borderRadius: 5, overflow: "hidden", position: "relative" } },
@@ -4628,7 +4701,7 @@ function MonthlyProgress(props) {
     ),
     React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginTop: 5, fontSize: 10, color: "#6B7280" } },
       React.createElement("span", null, "0"),
-      React.createElement("span", { style: { fontWeight: 700 } }, "Pace mark: " + Math.round(expectedPct) + "%"),
+      React.createElement("span", { style: { fontWeight: 700 } }, "Pace mark (working day " + workDay + "/" + WORKING_DAYS_PER_MONTH + "): " + Math.round(expectedPct) + "%"),
       React.createElement("span", null, target)
     )
   );
@@ -4649,17 +4722,20 @@ function TeamMonthlyProgress(props) {
             && String(e.date).indexOf(thisMonth) === 0
             && e.eodStatus === "submitted";
         });
-        var actual = 0;
+        var enrollMtd = 0;
+        var revenueMtd = 0;
         mine.forEach(function(e) {
-          actual += parseFloat(e.actualDelivery) || 0;
+          enrollMtd += sumEnrollments(e);
+          revenueMtd += parseFloat(e.mtdRevenue) || 0;
         });
         var target = getMonthTarget(mid, thisMonth);
-        var pct = target > 0 ? Math.min(100, (actual / target) * 100) : 0;
+        var pct = target > 0 ? Math.min(100, (enrollMtd / target) * 100) : 0;
         return {
           mid: mid,
           name: (USERS[mid] && USERS[mid].name) || mid,
           designation: (USERS[mid] && USERS[mid].designation) || "",
-          actual: actual,
+          enrollMtd: enrollMtd,
+          revenueMtd: revenueMtd,
           target: target,
           pct: pct,
           days: mine.length
@@ -4672,8 +4748,12 @@ function TeamMonthlyProgress(props) {
   var thisMonth = today().substring(0, 7);
   var monthName = new Date(thisMonth + "-01").toLocaleDateString("en-IN", { month: "long", year: "numeric" });
   var totalTarget = state.data.reduce(function(s, m) { return s + m.target; }, 0);
-  var totalActual = state.data.reduce(function(s, m) { return s + m.actual; }, 0);
-  var totalPct = totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0;
+  var totalEnroll = state.data.reduce(function(s, m) { return s + m.enrollMtd; }, 0);
+  var totalRevenue = state.data.reduce(function(s, m) { return s + m.revenueMtd; }, 0);
+  var totalPct = totalTarget > 0 ? (totalEnroll / totalTarget) * 100 : 0;
+  var revenueFmt = totalRevenue >= 100000
+    ? "\u20B9" + (totalRevenue/100000).toFixed(1) + "L"
+    : "\u20B9" + totalRevenue.toLocaleString("en-IN");
 
   if (state.loading) {
     return React.createElement("div", {
@@ -4689,11 +4769,11 @@ function TeamMonthlyProgress(props) {
   },
     React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 } },
       React.createElement("div", null,
-        React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: .5 } }, "Team Monthly Delivery Progress"),
-        React.createElement("div", { style: { fontSize: 14, fontWeight: 800, color: N, marginTop: 3 } }, monthName + " • Team Target: " + totalTarget + " units")
+        React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: .5 } }, "Team Monthly Enrollment Progress"),
+        React.createElement("div", { style: { fontSize: 14, fontWeight: 800, color: N, marginTop: 3 } }, monthName + " \u2022 Team Target: " + totalTarget + " enrollments \u2022 Revenue: " + revenueFmt)
       ),
       React.createElement("div", { style: { fontSize: 22, fontWeight: 900, color: totalPct >= 80 ? T : totalPct >= 50 ? AM : P } },
-        totalActual + "/" + totalTarget + " • " + Math.round(totalPct) + "%"
+        totalEnroll + "/" + totalTarget + " \u2022 " + Math.round(totalPct) + "%"
       )
     ),
     React.createElement("div", { style: { height: 10, background: "#E2E8F0", borderRadius: 5, overflow: "hidden", marginBottom: 14 } },
@@ -4702,11 +4782,14 @@ function TeamMonthlyProgress(props) {
     React.createElement("div", null,
       state.data.map(function(m) {
         var color = m.pct >= 80 ? T : m.pct >= 50 ? AM : P;
+        var mRev = m.revenueMtd >= 100000
+          ? "\u20B9" + (m.revenueMtd/100000).toFixed(1) + "L"
+          : "\u20B9" + m.revenueMtd.toLocaleString("en-IN");
         return React.createElement("div", {
           key: m.mid,
           style: {
             display: "grid",
-            gridTemplateColumns: isMob() ? "1fr 1fr" : "auto 1fr auto auto",
+            gridTemplateColumns: isMob() ? "1fr 1fr" : "auto 1fr auto auto auto",
             gap: 10, alignItems: "center", padding: "8px 10px",
             background: "#F7F8FC", border: "1px solid #E2E8F0", borderRadius: 7, marginBottom: 5
           }
@@ -4719,8 +4802,9 @@ function TeamMonthlyProgress(props) {
             React.createElement("div", { style: { position: "absolute", top: 0, left: 0, height: "100%", width: m.pct + "%", background: color } })
           ),
           React.createElement("div", { style: { fontSize: 13, fontWeight: 800, color: N, textAlign: "right", whiteSpace: "nowrap" } },
-            m.actual + "/" + m.target
+            m.enrollMtd + "/" + m.target
           ),
+          React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: T, textAlign: "right", whiteSpace: "nowrap" } }, mRev),
           React.createElement("div", { style: {
             padding: "2px 8px", borderRadius: 10,
             background: m.pct >= 80 ? "#D1FAE5" : m.pct >= 50 ? "#FEF3C7" : "#FEE2E2",
@@ -5348,6 +5432,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 
 
