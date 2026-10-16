@@ -37,6 +37,7 @@ var db=firebase.firestore();
 
 
 
+
 /* ── MOBILE VIEW TOGGLE ─────────────────────────────────────────── */
 var _mobileMode = window.innerWidth < 768;
 function isMob() { return _mobileMode; }
@@ -89,6 +90,16 @@ function postToSheet(type, data) {
     enrollSuccess72: data.enrollSuccess72 || "",
     enrollExperience: data.enrollExperience || "",
     enrollOther: data.enrollOther || "",
+    updateDate: data.updateDate || "",
+    xcoupon_book: data.xcoupon_book || "",
+    xcoupon_rwa: data.xcoupon_rwa || "",
+    xcoupon_sierra: data.xcoupon_sierra || "",
+    standees: data.standees || "",
+    manual_a4: data.manual_a4 || "",
+    manual_a5: data.manual_a5 || "",
+    env_72: data.env_72 || "",
+    env_33: data.env_33 || "",
+    env_exp: data.env_exp || "",
     p50: data.p50 || "",
     dnp: data.dnp || "",
     ni: data.ni || "",
@@ -2776,6 +2787,7 @@ function BdmDashboard({
   user,
   uid,
   onLogout,
+  onInventory,
   onPlan,
   onEod_own,
   onViewPlan,
@@ -2826,6 +2838,16 @@ function BdmDashboard({
       padding: "22px 16px"
     }
   }, /*#__PURE__*/React.createElement(MonthlyProgress, { memberId: uid }),
+    /*#__PURE__*/React.createElement("div", {
+      style: {display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 14px", background:"linear-gradient(135deg,#F0FDFA 0%,white 100%)", border:"1px solid #99F6E4", borderRadius:10, marginBottom:14, cursor:"pointer"},
+      onClick: onInventory
+    },
+      /*#__PURE__*/React.createElement("div", null,
+        /*#__PURE__*/React.createElement("div", {style:{fontSize:11, fontWeight:800, color:T, textTransform:"uppercase", letterSpacing:.5}}, "→ Dealership Inventory"),
+        /*#__PURE__*/React.createElement("div", {style:{fontSize:12, color:"#6B7280", marginTop:2}}, "Update stock of coupons, standees, manuals, envelopes")
+      ),
+      /*#__PURE__*/React.createElement("div", {style:{padding:"5px 12px", background:T, color:"white", borderRadius:6, fontSize:11, fontWeight:800}}, "Update →")
+    ),
     /*#__PURE__*/React.createElement("div", {
       style: {fontSize:11, fontWeight:800, color:"#6B7280", textTransform:"uppercase", letterSpacing:.6, marginBottom:10, marginTop:4}
     }, "My BAU — Daily Reporting"),
@@ -3340,8 +3362,8 @@ function GMDashboard({
     v: te.reduce((s,r) => s + sumEnrollments(r), 0),
     c: T
   }, {
-    l: "Today's Sales (₹)",
-    v: te.reduce((s,r) => s + (parseFloat(r.mtdRevenue)||0), 0).toLocaleString("en-IN"),
+    l: "MTD Sales (INR)",
+    v: (function(){var byMember={}; var thisMonth=today().substring(0,7); eods.filter(e=>e.eodStatus==="submitted" && String(e.date).indexOf(thisMonth)===0).forEach(e=>{var sales=parseFloat(e.mtdRevenue)||0; if(sales>0 && String(e.date)>=String(byMember[e.memberId]&&byMember[e.memberId].date||"")){byMember[e.memberId]={sales:sales, date:String(e.date)};}}); var total=Object.values(byMember).reduce((s,m)=>s+m.sales,0); return total>=100000 ? "₹"+(total/100000).toFixed(1)+"L" : "₹"+total.toLocaleString("en-IN");})(),
     c: AM
   }, {
     l: "Dealership Forecast",
@@ -4880,10 +4902,135 @@ function TeamMonthlyProgress(props) {
 }
 
 
+
+/* ══════════════════════════════════════════════════════════════
+   INVENTORY MODULE
+   ══════════════════════════════════════════════════════════════ */
+
+var INVENTORY_FIELDS = [
+  { key: "xcoupon_book", label: "xChargeOne Coupon Booklet" },
+  { key: "xcoupon_rwa", label: "xChargeOne Coupon - RWA Booklet" },
+  { key: "xcoupon_sierra", label: "xChargeOne Coupon - Sierra Exchange Booklet" },
+  { key: "standees", label: "Standees" },
+  { key: "manual_a4", label: "Training Manual - A4 size" },
+  { key: "manual_a5", label: "Training Manual - A5 size" },
+  { key: "env_72", label: "Customer Envelope 7.2" },
+  { key: "env_33", label: "Customer Envelope 3.3" },
+  { key: "env_exp", label: "Customer Envelope - Experience" }
+];
+
+var INVENTORY_REQUEST_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdoG5jOKD7YrCo3JcIz5W3sdDt-AgNGbpmTtGZjWtQK5S8o2w/viewform";
+
+var mkInventory = function(memberId, memberName) {
+  var obj = {
+    memberId: memberId,
+    memberName: memberName,
+    updateDate: today(),
+    timestamp: new Date().toISOString()
+  };
+  INVENTORY_FIELDS.forEach(function(f) { obj[f.key] = ""; });
+  return obj;
+};
+
+function InventoryForm(props) {
+  var user = props.user;
+  var uid = props.uid;
+  var onBack = props.onBack;
+  var onLogout = props.onLogout;
+
+  var s1 = React.useState(mkInventory(uid, user.name));
+  var inv = s1[0]; var setInv = s1[1];
+  var s2 = React.useState(false);
+  var saving = s2[0]; var setSaving = s2[1];
+  var s3 = React.useState("");
+  var msg = s3[0]; var setMsg = s3[1];
+
+  var upd = function(k, v) { setInv(function(prev) { var copy = Object.assign({}, prev); copy[k] = v; return copy; }); };
+
+  var doSave = function() {
+    setSaving(true);
+    setMsg("");
+    var payload = Object.assign({}, inv, { timestamp: new Date().toISOString() });
+    saveDoc("inventory", payload).then(function() {
+      // Also push to Google Sheet
+      postToSheet("inventory", payload).catch(function(){});
+      setSaving(false);
+      setMsg("\u2713 Inventory updated successfully");
+      setTimeout(function() { onBack(); }, 1500);
+    }).catch(function(err) {
+      setSaving(false);
+      setMsg("Error: " + err.message);
+    });
+  };
+
+  return React.createElement("div", {
+    style: { minHeight: "100vh", background: "#F0F4F8" }
+  },
+    React.createElement(Nav, { user: user, uid: uid, onLogout: onLogout, onBack: onBack, title: "Update Dealership Inventory" }),
+    React.createElement("div", { style: { maxWidth: 800, margin: "0 auto", padding: "22px 16px" } },
+      React.createElement(Card, {
+        code: "A",
+        title: "Inventory Details",
+        sub: "Update stock levels of promotional materials and training resources",
+        color: T
+      },
+        React.createElement("div", { style: { display: "grid", gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr", gap: "0 14px", marginBottom: 10 } },
+          React.createElement(Inp, {
+            label: "Date of Inventory Update",
+            value: inv.updateDate,
+            onChange: function(v) { upd("updateDate", v); },
+            type: "date",
+            hint: "When the stock count was taken"
+          })
+        ),
+        React.createElement("div", { style: { fontSize: 11, fontWeight: 800, color: T, textTransform: "uppercase", letterSpacing: .5, marginBottom: 8, marginTop: 14 } }, "Stock Count"),
+        React.createElement("div", { style: { display: "grid", gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr", gap: "0 14px" } },
+          INVENTORY_FIELDS.map(function(f) {
+            return React.createElement(Inp, {
+              key: f.key,
+              label: "# " + f.label,
+              value: inv[f.key],
+              onChange: function(v) { upd(f.key, v); },
+              ph: "e.g. 25",
+              hint: "Current count available"
+            });
+          })
+        )
+      ),
+      React.createElement(Card, {
+        code: "B",
+        title: "Need to Request More Supplies?",
+        sub: "Submit a request form if stock is low",
+        color: AM
+      },
+        React.createElement("a", {
+          href: INVENTORY_REQUEST_FORM_URL,
+          target: "_blank",
+          rel: "noopener",
+          style: { display: "inline-block", padding: "11px 20px", background: AM, color: "white", borderRadius: 7, fontSize: 13, fontWeight: 800, textDecoration: "none" }
+        }, "Open Inventory Request Form \u2192"),
+        React.createElement("div", { style: { fontSize: 11, color: "#6B7280", marginTop: 10 } }, "Opens in a new tab. Fill the Google Form to request additional materials from the central office.")
+      ),
+      msg && React.createElement("div", {
+        style: { padding: "10px 14px", background: msg.indexOf("Error") === 0 ? "#FEE2E2" : "#D1FAE5", color: msg.indexOf("Error") === 0 ? "#991B1B" : "#065F46", borderRadius: 7, fontSize: 12, fontWeight: 700, marginBottom: 14 }
+      }, msg),
+      React.createElement("div", { style: { display: "flex", justifyContent: "flex-end", paddingBottom: 24, marginTop: 4 } },
+        React.createElement(Btn, {
+          v: "teal",
+          onClick: doSave,
+          disabled: saving
+        }, saving ? "Saving\u2026" : "Save Inventory Update \u2713")
+      )
+    )
+  );
+}
+/* ── END INVENTORY ────────────────────────────────────────────── */
+
 function AbdmDashboard({
   user,
   uid,
   onLogout,
+  onInventory,
   onPlan,
   onEod,
   onViewPlan,
@@ -4919,7 +5066,18 @@ function AbdmDashboard({
       margin: "0 auto",
       padding: "22px 16px"
     }
-  }, /*#__PURE__*/React.createElement(MonthlyProgress, { memberId: uid }), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(MonthlyProgress, { memberId: uid }),
+    /*#__PURE__*/React.createElement("div", {
+      style: {display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 14px", background:"linear-gradient(135deg,#F0FDFA 0%,white 100%)", border:"1px solid #99F6E4", borderRadius:10, marginBottom:14, cursor:"pointer"},
+      onClick: onInventory
+    },
+      /*#__PURE__*/React.createElement("div", null,
+        /*#__PURE__*/React.createElement("div", {style:{fontSize:11, fontWeight:800, color:T, textTransform:"uppercase", letterSpacing:.5}}, "→ Dealership Inventory"),
+        /*#__PURE__*/React.createElement("div", {style:{fontSize:12, color:"#6B7280", marginTop:2}}, "Update stock of coupons, standees, manuals, envelopes")
+      ),
+      /*#__PURE__*/React.createElement("div", {style:{padding:"5px 12px", background:T, color:"white", borderRadius:6, fontSize:11, fontWeight:800}}, "Update →")
+    ),
+    /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
       gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr",
@@ -5135,6 +5293,9 @@ function App() {
     });
     setView("abdmEodForm");
   };
+  const openInventory = () => {
+    setView("inventoryForm");
+  };
   const openBdmMorning = async (mid, date) => {
     const d = await loadBdmMorning(mid, date);
     setCtx({
@@ -5256,10 +5417,17 @@ function App() {
     onBack: goBack,
     onLogout: logout
   });
+  if (view === "inventoryForm") return /*#__PURE__*/React.createElement(InventoryForm, {
+    user: user,
+    uid: uid,
+    onLogout: logout,
+    onBack: () => setView(user?.role === "bdm" ? "bdm" : user?.role === "gm" ? "gm" : "abdm")
+  });
   if (view === "abdm") return /*#__PURE__*/React.createElement(AbdmDashboard, {
     user: user,
     uid: uid,
     onLogout: logout,
+    onInventory: openInventory,
     onPlan: date => openAbdmPlan(uid, date),
     onEod: date => openAbdmEod(uid, date),
     onViewPlan: viewAbdmPlan,
@@ -5269,6 +5437,7 @@ function App() {
     user: user,
     uid: uid,
     onLogout: logout,
+    onInventory: openInventory,
     onPlan: date => openAbdmPlan(uid, date),
     onEod_own: date => openAbdmEod(uid, date),
     onViewPlan: viewAbdmPlan,
@@ -5494,6 +5663,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 
 
