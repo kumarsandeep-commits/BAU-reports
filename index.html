@@ -35,6 +35,7 @@ var db=firebase.firestore();
 
 
 
+
 /* ── MOBILE VIEW TOGGLE ─────────────────────────────────────────── */
 var _mobileMode = window.innerWidth < 768;
 function isMob() { return _mobileMode; }
@@ -381,7 +382,7 @@ const USERS = {
   "ABDM011":    {name:"Tarun",            role:"abdm", designation:"ABDM",                       password:"tarun@1231"},
   "ABDM021":    {name:"Anoop Jha",        role:"abdm", designation:"ABDM",                       password:"anoop@1241"},
   "AMS100":     {name:"Surya",            role:"bdm",  designation:"Account Manager - Sales",    password:"AMS#1000"},
-  "SA100":      {name:"Sales Associate",  role:"abdm", designation:"Sales Associate",            password:"SA#1110"},
+  "SA100":      {name:"SA01",             role:"abdm", designation:"Sales Associate",            password:"SA#1110"},
   "MANISH_1210":{name:"Manish Kumar",     role:"abdm", designation:"ABDM",                       password:"Manish@100"},
   "GM407":      {name:"Sandeep Kumar",    role:"gm",   designation:"GM - Sales",                 password:"gm*1324"}
 };
@@ -4565,10 +4566,10 @@ function ViewBdmEod({
    ══════════════════════════════════════════════════════════════ */
 
 var Q3_TARGETS = {
-  "ABDM011": { name: "Tarun",            oct: 94,  nov: 125, dec: 96,  q3: 315 },
-  "ABDM021": { name: "Anoop",            oct: 99,  nov: 132, dec: 99,  q3: 330 },
-  "AMS100":  { name: "Surya",            oct: 73,  nov: 98,  dec: 74,  q3: 245 },
-  "SA100":   { name: "Sales Associate",  oct: 33,  nov: 44,  dec: 33,  q3: 110 }
+  "ABDM021":    { name: "Anoop",   oct: 99,  nov: 132, dec: 99,  q3: 330 },
+  "AMS100":     { name: "Surya",   oct: 137, nov: 184, dec: 139, q3: 460 },
+  "MANISH_1210":{ name: "Manish",  oct: 46,  nov: 54,  dec: 40,  q3: 140 },
+  "SA100":      { name: "SA01",    oct: 24,  nov: 30,  dec: 21,  q3: 75  }
 };
 
 var WORKING_DAYS_PER_MONTH = 26;
@@ -5435,6 +5436,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 
 
