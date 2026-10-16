@@ -39,6 +39,8 @@ var db=firebase.firestore();
 
 
 
+
+
 /* ── MOBILE VIEW TOGGLE ─────────────────────────────────────────── */
 var _mobileMode = window.innerWidth < 768;
 function isMob() { return _mobileMode; }
@@ -605,6 +607,18 @@ const saveEod = async (uid, name, data) => {
     savedAt: new Date().toISOString()
   };
   await db.collection("eods").doc(`${uid}_${data.date}`).set(p);
+  return p;
+};
+const saveInventory = async (uid, name, data) => {
+  const p = {
+    ...data,
+    memberName: name,
+    memberId: uid,
+    savedAt: new Date().toISOString()
+  };
+  // Each inventory submission is a unique entry (allows multiple per day per dealer)
+  const docId = `${uid}_${data.updateDate}_${data.dealership}_${Date.now()}`.replace(/[^a-zA-Z0-9_-]/g, "_");
+  await db.collection("inventory").doc(docId).set(p);
   return p;
 };
 const saveBdmMorning = async (uid, name, data) => {
@@ -4958,8 +4972,7 @@ function InventoryForm(props) {
     setSaving(true);
     setMsg("");
     var payload = Object.assign({}, inv, { timestamp: new Date().toISOString() });
-    saveDoc("inventory", payload).then(function() {
-      // Also push to Google Sheet
+    saveInventory(uid, user.name, payload).then(function() {
       postToSheet("inventory", payload).catch(function(){});
       setSaving(false);
       setMsg("\u2713 Inventory updated successfully");
@@ -5684,6 +5697,8 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
+
 
 
 
