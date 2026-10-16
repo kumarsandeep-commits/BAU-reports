@@ -38,6 +38,7 @@ var db=firebase.firestore();
 
 
 
+
 /* ── MOBILE VIEW TOGGLE ─────────────────────────────────────────── */
 var _mobileMode = window.innerWidth < 768;
 function isMob() { return _mobileMode; }
@@ -91,6 +92,7 @@ function postToSheet(type, data) {
     enrollExperience: data.enrollExperience || "",
     enrollOther: data.enrollOther || "",
     updateDate: data.updateDate || "",
+    dealership: data.dealership || "",
     xcoupon_book: data.xcoupon_book || "",
     xcoupon_rwa: data.xcoupon_rwa || "",
     xcoupon_sierra: data.xcoupon_sierra || "",
@@ -4919,12 +4921,13 @@ var INVENTORY_FIELDS = [
   { key: "env_exp", label: "Customer Envelope - Experience" }
 ];
 
-var INVENTORY_REQUEST_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdoG5jOKD7YrCo3JcIz5W3sdDt-AgNGbpmTtGZjWtQK5S8o2w/viewform";
+var INVENTORY_REQUEST_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdcLvgDt5G4sA0r7waO91KRFLtGKxwFd6himkoJSmFjSeqraQ/viewform?usp=header";
 
 var mkInventory = function(memberId, memberName) {
   var obj = {
     memberId: memberId,
     memberName: memberName,
+    dealership: "",
     updateDate: today(),
     timestamp: new Date().toISOString()
   };
@@ -4948,6 +4951,10 @@ function InventoryForm(props) {
   var upd = function(k, v) { setInv(function(prev) { var copy = Object.assign({}, prev); copy[k] = v; return copy; }); };
 
   var doSave = function() {
+    if (!inv.dealership) {
+      setMsg("Error: Please select a dealership");
+      return;
+    }
     setSaving(true);
     setMsg("");
     var payload = Object.assign({}, inv, { timestamp: new Date().toISOString() });
@@ -4975,6 +4982,20 @@ function InventoryForm(props) {
         color: T
       },
         React.createElement("div", { style: { display: "grid", gridTemplateColumns: isMob() ? "1fr" : "1fr 1fr", gap: "0 14px", marginBottom: 10 } },
+          React.createElement("div", {style: {marginBottom: 11}},
+            React.createElement("label", {style: {display: "block", fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: .4, marginBottom: 4}}, "Dealership"),
+            React.createElement("select", {
+              value: inv.dealership,
+              onChange: function(e) { upd("dealership", e.target.value); },
+              style: {width: "100%", padding: "9px 11px", border: "1.5px solid #CBD5E1", borderRadius: 7, fontSize: 13, outline: "none", background: "white"}
+            },
+              React.createElement("option", {value: ""}, "— Select Dealership —"),
+              ALL_D.filter(function(d) { return d; }).map(function(d) {
+                return React.createElement("option", {key: d, value: d}, d);
+              })
+            ),
+            React.createElement("div", {style: {fontSize: 11, color: "#9CA3AF", marginTop: 4}}, "Dealership where stock is being counted")
+          ),
           React.createElement(Inp, {
             label: "Date of Inventory Update",
             value: inv.updateDate,
@@ -5663,6 +5684,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 
 
