@@ -41,6 +41,7 @@ var db=firebase.firestore();
 
 
 
+
 /* ── MOBILE VIEW TOGGLE ─────────────────────────────────────────── */
 var _mobileMode = window.innerWidth < 768;
 function isMob() { return _mobileMode; }
@@ -4973,7 +4974,10 @@ function InventoryForm(props) {
     setMsg("");
     var payload = Object.assign({}, inv, { timestamp: new Date().toISOString() });
     saveInventory(uid, user.name, payload).then(function() {
-      postToSheet("inventory", payload).catch(function(){});
+      try { 
+        var p = postToSheet("inventory", payload); 
+        if (p && p.catch) p.catch(function(){});
+      } catch(e) {}
       setSaving(false);
       setMsg("\u2713 Inventory updated successfully");
       setTimeout(function() { onBack(); }, 1500);
@@ -5697,6 +5701,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 
 
