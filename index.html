@@ -34,6 +34,7 @@ var db=firebase.firestore();
 
 
 
+
 /* ── MOBILE VIEW TOGGLE ─────────────────────────────────────────── */
 var _mobileMode = window.innerWidth < 768;
 function isMob() { return _mobileMode; }
@@ -381,7 +382,7 @@ const USERS = {
   "ABDM021":    {name:"Anoop Jha",        role:"abdm", designation:"ABDM",                       password:"anoop@1241"},
   "AMS100":     {name:"Surya",            role:"bdm",  designation:"Account Manager - Sales",    password:"AMS#1000"},
   "SA100":      {name:"Sales Associate",  role:"abdm", designation:"Sales Associate",            password:"SA#1110"},
-  "manish_1210":{name:"Manish Kumar",     role:"abdm", designation:"ABDM",                       password:"Manish@100"},
+  "MANISH_1210":{name:"Manish Kumar",     role:"abdm", designation:"ABDM",                       password:"Manish@100"},
   "GM407":      {name:"Sandeep Kumar",    role:"gm",   designation:"GM - Sales",                 password:"gm*1324"}
 };
 const MEMBER_IDS = Object.keys(USERS).filter(k => USERS[k].role === "abdm");
@@ -1195,7 +1196,7 @@ function Login({
   }, "Member ID"), /*#__PURE__*/React.createElement("input", {
     value: id,
     onChange: e => setId(e.target.value),
-    placeholder: "e.g. ABDM011 / AMS100 / SA100 / manish_1210 / GM407",
+    placeholder: "e.g. ABDM011 / AMS100 / SA100 / MANISH_1210 / GM407",
     onKeyDown: e => e.key === "Enter" && go(),
     style: {
       width: "100%",
@@ -5434,6 +5435,7 @@ function GMConsolidated(_ref) {
   );
 }
 /* ── END GM CONSOLIDATED VIEW ─────────────────────────── */
+
 
 
 
